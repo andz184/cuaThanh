@@ -40,38 +40,45 @@ export default async function handler(req, res) {
       });
     }
 
-    // Try JWT authentication first
+    // Use GoogleAuth directly (since JWT is causing issues)
     let auth, sheets;
     try {
-      const jwt = new google.auth.JWT(
-        creds.client_email,
-        null,
-        creds.private_key,
-        ['https://www.googleapis.com/auth/spreadsheets']
-      );
-
-      await jwt.authorize();
-      auth = jwt;
-      sheets = google.sheets({ version: 'v4', auth });
-      console.log('JWT authentication successful');
-    } catch (jwtError) {
-      console.error('JWT authentication failed:', jwtError);
+      const googleAuth = new google.auth.GoogleAuth({
+        credentials: creds,
+        scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+      });
       
-      // Fallback to GoogleAuth
+      auth = await googleAuth.getClient();
+      sheets = google.sheets({ version: 'v4', auth });
+      console.log('GoogleAuth authentication successful');
+    } catch (googleAuthError) {
+      console.error('GoogleAuth authentication failed:', googleAuthError);
+      return res.status(500).json({ 
+        ok: false, 
+        error: `Authentication failed: ${googleAuthError.message}. Please check your service account credentials.` 
+      });
+    }
+
+    if (action === 'read') {
+      if (!sheetId || !sheetName) {
+        return res.status(400).json({ ok: false, error: 'Missing sheetId/sheetName' });
+      }
+      
       try {
-        const googleAuth = new google.auth.GoogleAuth({
-          credentials: creds,
-          scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+        const readResult = await sheets.spreadsheets.values.get({
+          spreadsheetId: sheetId,
+          range: `${sheetName}!A:Z`,
         });
         
-        auth = await googleAuth.getClient();
-        sheets = google.sheets({ version: 'v4', auth });
-        console.log('GoogleAuth authentication successful');
-      } catch (googleAuthError) {
-        console.error('GoogleAuth authentication failed:', googleAuthError);
-        return res.status(500).json({ 
-          ok: false, 
-          error: `Authentication failed: ${jwtError.message}. Please check your service account credentials.` 
+        return res.status(200).json({
+          ok: true,
+          values: readResult.data.values || []
+        });
+      } catch (readError) {
+        console.error('Read error:', readError);
+        return res.status(500).json({
+          ok: false,
+          error: `Failed to read from Google Sheets: ${readError.message}`
         });
       }
     }
