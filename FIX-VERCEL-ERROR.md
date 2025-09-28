@@ -10,20 +10,46 @@ Environment Variable "GOOGLE_API_SERVICES" references Secret "google_api_service
 Error: Function Runtimes must have a valid version, for example `now-php@1.0.0`.
 ```
 
+## Lỗi 3: No Output Directory found
+```
+Error: No Output Directory named "public" found after the Build completed.
+```
+
+## Lỗi 4: Node.js version warning
+```
+Warning: Detected "engines": { "node": ">=18.0.0" } in your `package.json`
+```
+
 ## ✅ Cách sửa:
 
-### Bước 1: Xóa file vercel.json (nếu có)
-```bash
-rm vercel.json
+### Bước 1: Sửa package.json
+```json
+{
+  "engines": {
+    "node": "18.x"
+  }
+}
 ```
-**Lý do**: Vercel sẽ tự động detect Node.js runtime, không cần file cấu hình
 
-### Bước 2: Deploy lại
+### Bước 2: Tạo file vercel.json
+```json
+{
+  "buildCommand": "echo 'No build step required'",
+  "outputDirectory": ".",
+  "functions": {
+    "api/**/*.js": {
+      "runtime": "nodejs18.x"
+    }
+  }
+}
+```
+
+### Bước 3: Deploy lại
 ```bash
 vercel
 ```
 
-### Bước 3: Cấu hình Environment Variable trong Vercel Dashboard
+### Bước 4: Cấu hình Environment Variable trong Vercel Dashboard
 1. Vào [Vercel Dashboard](https://vercel.com/dashboard)
 2. Chọn project của bạn
 3. Vào "Settings" → "Environment Variables"
@@ -34,15 +60,15 @@ vercel
    - **Environment**: Chọn tất cả (Production, Preview, Development)
 6. Click "Save"
 
-### Bước 4: Redeploy
+### Bước 5: Redeploy
 1. Vào "Deployments" tab
 2. Click "Redeploy" trên deployment mới nhất
 3. Hoặc chạy: `vercel --prod`
 
 ## 🎯 Nguyên nhân:
-- File `vercel.json` có cấu hình sai format runtime
-- Vercel yêu cầu format `now-php@1.0.0` thay vì `nodejs18.x`
-- Cách tốt nhất là xóa file `vercel.json` và để Vercel tự động detect
+- **Node.js version**: `>=18.0.0` gây warning, cần dùng `18.x`
+- **Output Directory**: Vercel tìm thư mục "public" nhưng không có
+- **Runtime**: Cần cấu hình đúng format cho API functions
 
 ## ✅ Sau khi sửa:
 - Environment variable sẽ hoạt động bình thường
