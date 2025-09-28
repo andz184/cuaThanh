@@ -1238,17 +1238,29 @@
         try {
             const sheetId = SHEET_CONFIG[`${type.toUpperCase()}_SHEET_ID`];
             
+            // Debug logging
+            console.log('saveToGoogleSheets called with:', { type, sheetName, sheetId, dataLength: data?.length });
+            console.log('SHEET_CONFIG:', SHEET_CONFIG);
+            
+            if (!sheetId) {
+                throw new Error(`Sheet ID not found for type: ${type}`);
+            }
+            
+            const requestBody = {
+                action: 'append',
+                sheetId: sheetId,
+                sheetName: sheetName,
+                data: data
+            };
+            
+            console.log('Request body:', requestBody);
+            
             const response = await fetch('/api/google-sheets', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    action: 'append',
-                    sheetId: sheetId,
-                    sheetName: sheetName,
-                    data: data
-                })
+                body: JSON.stringify(requestBody)
             });
             
             if (!response.ok) {
@@ -1394,16 +1406,27 @@
         try {
             const sheetId = SHEET_CONFIG[`${type.toUpperCase()}_SHEET_ID`];
             
+            // Debug logging
+            console.log('readFromGoogleSheets called with:', { type, sheetName, sheetId });
+            
+            if (!sheetId) {
+                throw new Error(`Sheet ID not found for type: ${type}`);
+            }
+            
+            const requestBody = {
+                action: 'read',
+                sheetId: sheetId,
+                sheetName: sheetName
+            };
+            
+            console.log('Read request body:', requestBody);
+            
             const response = await fetch('/api/google-sheets', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    action: 'read',
-                    sheetId: sheetId,
-                    sheetName: sheetName
-                })
+                body: JSON.stringify(requestBody)
             });
             
             if (!response.ok) {
