@@ -28,7 +28,7 @@
 ├── index.html
 ├── api/
 │   └── google-sheets.js
-├── package.json
+├── package.json (đơn giản: googleapis + Node.js 18.x)
 └── README.md
 ```
 
