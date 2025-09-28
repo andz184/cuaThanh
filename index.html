@@ -1130,6 +1130,26 @@
     let currentView = 'bill';
     let nextAssignmentId = 1; // ID tiếp theo cho assignment
 
+    // ===== HELPER FUNCTION =====
+    function getSheetId(type) {
+        let configKey;
+        if (type === 'vehicles') {
+            configKey = 'VEHICLE_SHEET_ID';
+        } else if (type === 'bills') {
+            configKey = 'BILL_SHEET_ID';
+        } else if (type === 'assignments') {
+            configKey = 'ASSIGNMENT_SHEET_ID';
+        } else {
+            configKey = `${type.toUpperCase()}_SHEET_ID`;
+        }
+        
+        const sheetId = SHEET_CONFIG[configKey];
+        if (!sheetId) {
+            throw new Error(`Sheet ID not found for type: ${type}, configKey: ${configKey}`);
+        }
+        return sheetId;
+    }
+
     // ===== HÀM CHUYỂN VIEW =====
     function showView(viewName) {
         // Ẩn tất cả view
@@ -1236,15 +1256,10 @@
     // ===== HÀM LƯU DỮ LIỆU VÀO GOOGLE SHEETS =====
     async function saveToGoogleSheets(type, data, sheetName) {
         try {
-            const sheetId = SHEET_CONFIG[`${type.toUpperCase()}_SHEET_ID`];
+            const sheetId = getSheetId(type);
             
             // Debug logging
             console.log('saveToGoogleSheets called with:', { type, sheetName, sheetId, dataLength: data?.length });
-            console.log('SHEET_CONFIG:', SHEET_CONFIG);
-            
-            if (!sheetId) {
-                throw new Error(`Sheet ID not found for type: ${type}`);
-            }
             
             const requestBody = {
                 action: 'append',
@@ -1404,14 +1419,10 @@
     // ===== HÀM ĐỌC DỮ LIỆU TỪ GOOGLE SHEETS =====
     async function readFromGoogleSheets(type, sheetName) {
         try {
-            const sheetId = SHEET_CONFIG[`${type.toUpperCase()}_SHEET_ID`];
+            const sheetId = getSheetId(type);
             
             // Debug logging
             console.log('readFromGoogleSheets called with:', { type, sheetName, sheetId });
-            
-            if (!sheetId) {
-                throw new Error(`Sheet ID not found for type: ${type}`);
-            }
             
             const requestBody = {
                 action: 'read',
@@ -1445,7 +1456,7 @@
     // ===== HÀM XÓA DỮ LIỆU TỪ GOOGLE SHEETS =====
     async function deleteFromGoogleSheets(type, sheetName, rowIndex) {
         try {
-            const sheetId = SHEET_CONFIG[`${type.toUpperCase()}_SHEET_ID`];
+            const sheetId = getSheetId(type);
             
             const response = await fetch('/api/google-sheets', {
                 method: 'POST',
