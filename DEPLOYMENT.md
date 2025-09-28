@@ -47,10 +47,13 @@ vercel
 1. Vào [Vercel Dashboard](https://vercel.com/dashboard)
 2. Chọn project vừa deploy
 3. Vào "Settings" → "Environment Variables"
-4. Thêm biến mới:
+4. Click "Add New" → "Environment Variable"
+5. Điền thông tin:
    - **Name**: `GOOGLE_API_SERVICES`
-   - **Value**: Paste toàn bộ nội dung file JSON service account
-   - **Environment**: Production, Preview, Development (chọn tất cả)
+   - **Value**: Paste toàn bộ nội dung file JSON service account (không cần dấu ngoặc kép)
+   - **Environment**: Chọn tất cả (Production, Preview, Development)
+6. Click "Save"
+7. **Quan trọng**: Redeploy project sau khi thêm environment variable
 
 ## Bước 3: Cấu hình Google Sheets
 
@@ -93,6 +96,8 @@ vercel
 ### Lỗi Environment Variable
 - Kiểm tra `GOOGLE_API_SERVICES` đã được set trong Vercel
 - Đảm bảo JSON format đúng
+- **Lỗi "references Secret"**: Xóa `vercel.json` hoặc sửa lại như hướng dẫn
+- Redeploy project sau khi thêm environment variable
 
 ### Lỗi CORS
 - Kiểm tra API endpoint có CORS headers
