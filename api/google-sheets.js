@@ -16,18 +16,46 @@ export default async function handler(req, res) {
     // Parse service account from environment variable
     const serviceAccountJson = process.env.GOOGLE_API_SERVICES;
     if (!serviceAccountJson) {
-      throw new Error('GOOGLE_API_SERVICES environment variable not set');
+      console.error('GOOGLE_API_SERVICES environment variable not set');
+      return res.status(500).json({
+        success: false,
+        error: 'GOOGLE_API_SERVICES environment variable not set. Please configure it in Vercel Dashboard.'
+      });
     }
 
-    const serviceAccount = JSON.parse(serviceAccountJson);
+    let serviceAccount;
+    try {
+      serviceAccount = JSON.parse(serviceAccountJson);
+      console.log('Service account parsed successfully:', {
+        type: serviceAccount.type,
+        project_id: serviceAccount.project_id,
+        client_email: serviceAccount.client_email
+      });
+    } catch (parseError) {
+      console.error('Error parsing service account JSON:', parseError);
+      return res.status(500).json({
+        success: false,
+        error: 'Invalid GOOGLE_API_SERVICES JSON format. Please check your environment variable.'
+      });
+    }
 
     // Initialize Google Sheets API
-    const auth = new google.auth.GoogleAuth({
-      credentials: serviceAccount,
-      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-    });
+    let auth, sheets;
+    try {
+      auth = new google.auth.GoogleAuth({
+        credentials: serviceAccount,
+        scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+      });
 
-    const sheets = google.sheets({ version: 'v4', auth });
+      sheets = google.sheets({ version: 'v4', auth });
+      console.log('Google Sheets API initialized successfully');
+    } catch (authError) {
+      console.error('Error initializing Google Sheets API:', authError);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to initialize Google Sheets API. Please check your service account credentials.'
+      });
+    }
 
     const { action, sheetId, sheetName, data, rowIndex } = req.body;
 

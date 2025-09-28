@@ -1094,9 +1094,14 @@
                 1. Copy toàn bộ nội dung file JSON service account<br>
                 2. Vào Vercel Dashboard → Environment Variables<br>
                 3. Thêm biến: <code>GOOGLE_API_SERVICES</code><br>
-                4. Paste JSON vào value<br>
+                4. Paste JSON vào value (không cần dấu ngoặc kép)<br>
                 5. Chia sẻ Google Sheets với: <code>sgiholding@ansha-462603.iam.gserviceaccount.com</code><br>
-                6. Cấp quyền <strong>"Editor"</strong><br><br>
+                6. Cấp quyền <strong>"Editor"</strong><br>
+                7. Redeploy project: <code>vercel --prod</code><br><br>
+                <strong>⚠️ Nếu gặp lỗi "Invalid JWT Signature":</strong><br>
+                - Kiểm tra JSON format đúng không<br>
+                - Kiểm tra Google Sheets đã chia sẻ chưa<br>
+                - Redeploy sau khi cấu hình<br><br>
                 <strong>💡 Tạm thời:</strong> Dữ liệu sẽ được lưu vào localStorage
             </div>
             
