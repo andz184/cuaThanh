@@ -14,19 +14,67 @@ export default async function handler(req, res) {
     const { action, sheetId, sheetName, data, id } = req.body || {};
     if (!action) return res.status(400).json({ ok: false, error: 'Missing action' });
 
-    const credsJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-    if (!credsJson) return res.status(500).json({ ok: false, error: 'Missing GOOGLE_SERVICE_ACCOUNT_JSON' });
-    const creds = JSON.parse(credsJson);
+    // Try both environment variable names for backward compatibility
+    let credsJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON || process.env.GOOGLE_API_SERVICES;
+    if (!credsJson) {
+      console.error('Missing environment variable. Tried: GOOGLE_SERVICE_ACCOUNT_JSON, GOOGLE_API_SERVICES');
+      return res.status(500).json({ 
+        ok: false, 
+        error: 'Missing GOOGLE_SERVICE_ACCOUNT_JSON or GOOGLE_API_SERVICES environment variable' 
+      });
+    }
+    
+    let creds;
+    try {
+      creds = JSON.parse(credsJson);
+      console.log('Service account parsed successfully:', {
+        type: creds.type,
+        project_id: creds.project_id,
+        client_email: creds.client_email
+      });
+    } catch (parseError) {
+      console.error('Error parsing service account JSON:', parseError);
+      return res.status(500).json({ 
+        ok: false, 
+        error: 'Invalid JSON format in environment variable' 
+      });
+    }
 
-    const jwt = new google.auth.JWT(
-      creds.client_email,
-      null,
-      creds.private_key,
-      ['https://www.googleapis.com/auth/spreadsheets']
-    );
+    // Try JWT authentication first
+    let auth, sheets;
+    try {
+      const jwt = new google.auth.JWT(
+        creds.client_email,
+        null,
+        creds.private_key,
+        ['https://www.googleapis.com/auth/spreadsheets']
+      );
 
-    await jwt.authorize();
-    const sheets = google.sheets({ version: 'v4', auth: jwt });
+      await jwt.authorize();
+      auth = jwt;
+      sheets = google.sheets({ version: 'v4', auth });
+      console.log('JWT authentication successful');
+    } catch (jwtError) {
+      console.error('JWT authentication failed:', jwtError);
+      
+      // Fallback to GoogleAuth
+      try {
+        const googleAuth = new google.auth.GoogleAuth({
+          credentials: creds,
+          scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+        });
+        
+        auth = await googleAuth.getClient();
+        sheets = google.sheets({ version: 'v4', auth });
+        console.log('GoogleAuth authentication successful');
+      } catch (googleAuthError) {
+        console.error('GoogleAuth authentication failed:', googleAuthError);
+        return res.status(500).json({ 
+          ok: false, 
+          error: `Authentication failed: ${jwtError.message}. Please check your service account credentials.` 
+        });
+      }
+    }
 
     if (action === 'update') {
       if (!sheetId || !sheetName || !data) {
