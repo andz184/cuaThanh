@@ -1,8 +1,13 @@
-# 🔧 Fix Lỗi Vercel: "Environment Variable references Secret"
+# 🔧 Fix Lỗi Vercel
 
-## Lỗi gặp phải:
+## Lỗi 1: Environment Variable references Secret
 ```
 Environment Variable "GOOGLE_API_SERVICES" references Secret "google_api_services", which does not exist.
+```
+
+## Lỗi 2: Function Runtimes must have a valid version
+```
+Error: Function Runtimes must have a valid version, for example `now-php@1.0.0`.
 ```
 
 ## ✅ Cách sửa:
@@ -11,6 +16,7 @@ Environment Variable "GOOGLE_API_SERVICES" references Secret "google_api_service
 ```bash
 rm vercel.json
 ```
+**Lý do**: Vercel sẽ tự động detect Node.js runtime, không cần file cấu hình
 
 ### Bước 2: Deploy lại
 ```bash
@@ -34,9 +40,9 @@ vercel
 3. Hoặc chạy: `vercel --prod`
 
 ## 🎯 Nguyên nhân:
-- File `vercel.json` có cấu hình `"env": {"GOOGLE_API_SERVICES": "@google_api_services"}` 
-- Vercel tìm kiếm secret tên "google_api_services" nhưng không tìm thấy
-- Cần xóa cấu hình này và dùng Environment Variables thông thường
+- File `vercel.json` có cấu hình sai format runtime
+- Vercel yêu cầu format `now-php@1.0.0` thay vì `nodejs18.x`
+- Cách tốt nhất là xóa file `vercel.json` và để Vercel tự động detect
 
 ## ✅ Sau khi sửa:
 - Environment variable sẽ hoạt động bình thường
