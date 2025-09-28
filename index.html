@@ -1,0 +1,2444 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Quản Lý Vận Tải Eco</title>
+    <!-- Thư viện JsBarcode để tạo mã vạch -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <!-- Thư viện Google Sheets API -->
+    <script src="https://apis.google.com/js/api.js"></script>
+    <style>
+        /* CSS cho toàn bộ trang */
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f2f5;
+            min-height: 100vh;
+        }
+
+        /* Navigation */
+        .nav-container {
+            background: #2c3e50;
+            color: white;
+            padding: 15px 20px;
+            margin: -20px -20px 20px -20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .nav-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .nav-btn:hover {
+            background: #2980b9;
+        }
+
+        .nav-btn.active {
+            background: #e74c3c;
+        }
+
+        /* View containers */
+        .view-container {
+            display: none;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .view-container.active {
+            display: block;
+        }
+
+        /* Table styles */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .data-table th {
+            background: #34495e;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+        }
+
+        .data-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        /* Form styles */
+        .form-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+        }
+
+        .btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            transition: background 0.3s;
+        }
+
+        .btn:hover {
+            background: #2980b9;
+        }
+
+        .btn-success {
+            background: #27ae60;
+        }
+
+        .btn-success:hover {
+            background: #229954;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        .btn-warning {
+            background: #f39c12;
+        }
+
+        .btn-warning:hover {
+            background: #e67e22;
+        }
+
+        /* Status badges */
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-pending {
+            background: #f39c12;
+            color: white;
+        }
+
+        .status-active {
+            background: #27ae60;
+            color: white;
+        }
+
+        .status-completed {
+            background: #3498db;
+            color: white;
+        }
+
+        .status-cancelled {
+            background: #e74c3c;
+            color: white;
+        }
+
+        /* Grid layout */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .grid-2, .grid-3 {
+                grid-template-columns: 1fr;
+            }
+            
+            .nav-buttons {
+                flex-direction: column;
+            }
+        }
+
+        /* Container chính của hóa đơn - Tăng kích thước lên 1.15 lần */
+        .bill-container {
+            width: calc(8.5in * 1.15); /* Tăng chiều rộng lên 1.15 lần */
+            background-color: white;
+            border: 1px solid #000;
+            box-shadow: 0 0 0px rgba(0, 0, 0, 0.1);
+            position: relative;
+            padding: 5px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            font-size: 1.15em; /* Tăng kích thước chữ tổng thể */
+        }
+
+        /* Header - Vận tải ECO và mã vạch */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #000;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            flex: 1;
+        }
+        
+        /* CSS cho logo và QR code trong header */
+        .header-left .logo {
+            width: calc(40px * 1.15);
+            height: calc(40px * 1.15);
+            margin-right: calc(5px * 1.15);
+        }
+        
+        /* Loại bỏ CSS của SVG cũ */
+        .header-left svg {
+            display: none;
+        }
+
+        .company-info h1 {
+            font-size: 1.15rem;
+            font-weight: bold;
+            margin: 0;
+            color: #000;
+        }
+
+        .company-info h2 {
+            font-size: 0.8rem;
+            font-weight: normal;
+            margin: 0;
+        }
+        
+        .company-info p {
+            font-size: 0.7rem;
+            margin: 1px 0;
+            line-height: 1.2;
+        }
+
+        .hotline {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        
+        /* Cập nhật CSS để mã vạch hiển thị đúng và lớn hơn */
+        .header-right {
+            display: flex;
+            justify-content: flex-end;
+            text-align: right;
+            padding-left: 10px;
+        }
+        
+        .header-right #barcode-svg {
+            display: block;
+            margin-bottom: 5px;
+            width: calc(180px * 1.15);
+            height: calc(50px * 1.15);
+            background-color: transparent;
+            color: #000;
+        }
+
+        /* Phần thông tin người gửi/nhận */
+        .info-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            border: 1px solid #000;
+            flex-grow: 1;
+        }
+
+        .info-panel {
+            padding: 3px 5px;
+        }
+
+        .info-panel.border-right {
+            border-right: 1px solid #000;
+        }
+
+        .info-panel .item {
+            display: flex;
+            font-size: 0.8rem;
+            margin-bottom: 3px;
+        }
+        .info-panel .item .label {
+            font-weight: bold;
+            min-width: 90px;
+            white-space: nowrap;
+        }
+
+        /* Phần hàng hóa và cước phí */
+        .content-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            border-bottom: 1px solid #000;
+            flex-grow: 1;
+        }
+        .main-content {
+            border-right: 1px solid #000;
+        }
+        .content-table table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+            table-layout: fixed;
+        }
+        .content-table th, .content-table td {
+            border: 1px solid #000;
+            padding: 3px;
+            text-align: center;
+        }
+        .content-table th {
+            background-color: #f2f2f2;
+        }
+        .notes-table {
+            border-top: 1px solid #000;
+        }
+        .notes-table table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+            table-layout: fixed;
+        }
+        .notes-table th, .notes-table td {
+            border: 1px solid #000;
+            padding: 3px;
+            text-align: center;
+        }
+        .notes-table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+
+        .side-content {
+            padding: 3px 5px;
+            display: flex;
+            flex-direction: column;
+        }
+        .side-content .item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            margin-bottom: 3px;
+        }
+        .side-content .item .label {
+            font-weight: bold;
+        }
+        .side-content .item .value {
+            text-align: right;
+            border-bottom: 1px dashed #000;
+        }
+        .item-separator {
+            border-bottom: 1px solid #000;
+            margin: 5px 0;
+        }
+        .side-content .value-money {
+            font-size: 1.1rem;
+            font-weight: normal;
+            text-align: right;
+            border-bottom: 1px dashed #000;
+        }
+        .side-content .item:nth-of-type(3) {
+            margin-top: auto;
+        }
+        .side-content .total-cost {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 5px;
+            padding-top: 3px;
+            border-top: 1px solid #000;
+        }
+        .side-content .total-cost .label {
+            font-weight: bold;
+        }
+        .side-content .total-cost .value-money {
+            font-size: 1.3rem;
+            font-weight: normal;
+            color: #e74c3c;
+        }
+        
+        /* Chữ ký và các thông tin khác */
+        .signature-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            text-align: center;
+            font-size: 0.8rem;
+            border-top: 1px solid #000;
+            padding-bottom: 5px;
+        }
+        .signature-box {
+            padding: 5px;
+            min-height: 2cm;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            gap: 5px;
+        }
+        .signature-box.border-right {
+            border-right: 1px solid #000;
+        }
+        .signature-box p {
+            margin: 0;
+            line-height: 1.5;
+        }
+        .signature-box .date-time {
+            margin-bottom: 0;
+            border-bottom: 1px dashed #000;
+        }
+        
+        .recipient-signature {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-top: 10px;
+        }
+        .recipient-signature .employee-label {
+            margin-left: auto;
+            text-align: right;
+            line-height: 1.2;
+            padding-left: 10px;
+        }
+
+        /* Footer */
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-top: 5px;
+            font-size: 0.8rem;
+        }
+        .qr-note-container {
+            display: flex;
+            align-items: center;
+            flex-grow: 1;
+        }
+        .qr-code {
+            width: calc(40px * 1.15);
+            height: calc(40px * 1.15);
+            margin-right: 5px;
+        }
+        .qr-note {
+            margin: 0;
+            line-height: 1.2;
+            font-size: 0.7rem;
+            white-space: nowrap;
+            width: auto;
+        }
+        .footer-right {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 5px;
+            text-align: right;
+        }
+        .print-button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+
+        /* --- THAY THẾ TOÀN BỘ KHỐI IN --- */
+        @media print {
+            /* Khổ giấy A4 dọc, lề mỏng để tăng vùng in */
+            @page {
+                size: A4 portrait; /* Thay đổi khổ giấy và hướng */
+                margin: 5mm;
+            }
+
+            /* Cố định kích thước trang để trình duyệt canh đúng */
+            html, body {
+                width: 210mm; /* Chiều rộng của A4 */
+                height: 297mm; /* Chiều cao của A4 */
+                margin: 0 !important;
+                padding: 0 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                background: #fff !important;
+
+                /* --- THÊM CÁC THUỘC TÍNH NÀY --- */
+                display: flex; /* Sử dụng Flexbox cho body */
+                justify-content: center; /* Căn giữa theo chiều ngang */
+                align-items: flex-start; /* Căn dọc về đầu trang (top) */
+                /* --- KẾT THÚC PHẦN THÊM --- */
+            }
+
+            /* Tắt bóng/viền thừa, đặt bề rộng theo vùng in */
+            .bill-container {
+                box-shadow: none !important;
+                border: 1px solid #000;  /* giữ viền ngoài */
+                width: 200mm;            /* 210mm - 2*5mm lề = 200mm */
+                max-width: 200mm;
+                padding: 5px;            /* giữ padding nhỏ để không tràn */
+                font-size: 1.0em;        /* in gọn hơn 1 chút so với màn hình */
+                /* Thêm chiều cao để chiếm nửa trang, bạn có thể cần điều chỉnh */
+                height: 140mm; /* Khoảng một nửa chiều cao A4, có thể cần tinh chỉnh */
+                overflow: hidden; /* Đảm bảo nội dung không tràn nếu vượt quá */
+
+                /* --- THÊM CÁC THUỘC TÍNH NÀY ĐỂ ĐẢM BẢO KHÔNG BỊ LỖI CĂN CHỈNH KHI IN --- */
+                margin-top: 0 !important; /* Loại bỏ margin-top nếu có từ các định nghĩa khác */
+                /* --- KẾT THÚC PHẦN THÊM --- */
+            }
+
+            /* Chặn ngắt trang giữa các khối chính */
+            .header,
+            .info-section,
+            .content-section,
+            .signature-section,
+            .footer {
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+
+        /* Ẩn nút in khi in */
+        .print-button { display: none !important; }
+    }
+    </style>
+</head>
+<body>
+
+<!-- Navigation -->
+<div class="nav-container">
+    <h2>🚛 Hệ Thống Quản Lý Vận Tải ECO</h2>
+    <div class="nav-buttons">
+        <button class="nav-btn active" onclick="showView('bill')">📄 Hóa Đơn</button>
+        <button class="nav-btn" onclick="showView('vehicles')">🚛 Quản Lý Xe</button>
+        <button class="nav-btn" onclick="showView('assign-bills')">📋 Xếp Bill Cho Xe</button>
+        <button class="nav-btn" onclick="showView('vehicle-status')">📊 Trạng Thái Xe</button>
+        <button class="nav-btn" onclick="showView('unassigned-bills')">📦 Đơn Chưa Xếp</button>
+        <button class="nav-btn" onclick="showView('vehicle-bills')">📋 Quản Lý Bill Trên Xe</button>
+        <button class="nav-btn" onclick="showView('local-data')">💾 Dữ Liệu Local</button>
+    </div>
+</div>
+
+<!-- View: Hóa Đơn (mặc định) -->
+<div id="bill-view" class="view-container active">
+<div class="bill-container scale-print">
+    <!-- Header: Logo, tên công ty và mã vạch -->
+    <div class="header">
+        <div class="header-left">
+            <!-- Logo cũ được giữ lại -->
+            <img class="logo" src="https://tuducdat2001-cyber.github.io/bill/z6887164537636_0c445e9b4d6e1687482f51f307b359e5.jpg" alt="Logo Công ty">
+            <div class="company-info">
+                <h1>VẬN TẢI ECO</h1>
+                <h2>VẬN CHUYỂN HÀNG HOÁ BẮC - NAM</h2>
+                <p>Express & Exacting</p>
+                <p class="hotline">Hotline 0946 936 999-0888.805.625</p>
+            </div>
+        </div>
+        <div class="header-right">
+            <!-- Mã vạch được tạo tự động -->
+            <svg id="barcode-svg"></svg>
+        </div>
+    </div>
+    
+    <!-- Phần thông tin người gửi và người nhận -->
+    <div class="info-section">
+        <div class="info-panel border-right">
+            <div class="item">
+                <span class="label">Tên khách gửi:</span>
+                <span class="value" id="tenNguoiGui"></span>
+            </div>
+            <div class="item">
+                <span class="label">Địa chỉ:</span>
+                <span class="value" id="diaChiNguoiGui"></span>
+            </div>
+            <div class="item">
+                <span class="label">Xã, Phường:</span>
+                <span class="value" id="xaPhuongGui"></span>
+            </div>
+            <div class="item">
+                <span class="label">Tỉnh/ TP:</span>
+                <span class="value" id="tinhTPGui"></span>
+            </div>
+            <div class="item">
+                <span class="label">Số điện thoại:</span>
+                <span class="value" id="sdtNguoiGui"></span>
+            </div>
+        </div>
+        <div class="info-panel">
+            <div class="item">
+                <span class="label">Tên khách nhận:</span>
+                <span class="value" id="tenNguoiNhan"></span>
+            </div>
+            <div class="item">
+                <span class="label">Địa chỉ:</span>
+                <span class="value" id="diaChiNguoiNhan"></span>
+            </div>
+            <div class="item">
+                <span class="label">Xã, Phường:</span>
+                <span class="value" id="xaPhuongNhan"></span>
+            </div>
+            <div class="item">
+                <span class="label">Tỉnh/ TP:</span>
+                <span class="value" id="tinhTPNhan"></span>
+            </div>
+            <div class="item">
+                <span class="label">Số điện thoại:</span>
+                <span class="value" id="sdtNguoiNhan"></span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Phần hàng hóa và cước phí -->
+    <div class="content-section">
+        <div class="main-content">
+            <div class="content-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Dịch vụ</th>
+                            <th>Số kiện</th>
+                            <th>Trọng lượng</th>
+                            <th>Thể tích</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td id="dichVuTrongBang"></td>
+                            <td id="soKien"></td>
+                            <td id="tlThuc"></td>
+                            <td id="thetich"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="notes-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nội dung hàng hoá</th>
+                            <th>Ghi chú</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td id="noiDungHangHoa"></td>
+                            <td id="ghiChu"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="side-content">
+            <div class="item">
+                <span class="label">Hình thức thanh toán:</span>
+                <span class="value" id="thanhToan"></span>
+            </div>
+            <div class="item-separator"></div>
+            <div class="item">
+                <span class="label">Cước chính:</span>
+                <span class="value-money" id="cuocChinh"></span>
+            </div>
+            <div class="item">
+                <span class="label">Dịch vụ cộng thêm:</span>
+                <span class="value-money" id="dichVuThem"></span>
+            </div>
+            <div class="item">
+                <span class="label">Tổng cước:</span>
+                <span class="value-money" id="tongCuoc"></span>
+            </div>
+            <div class="total-cost">
+                <span class="label">Thu hộ:</span>
+                <span class="value-money" id="thuHo"></span>
+            </div>
+            <div class="total-cost">
+                <span class="label">Tổng phải thu:</span>
+                <span class="value-money" id="tongPhaiThu"></span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Phần chữ ký -->
+    <div class="signature-section">
+        <div class="signature-box border-right">
+            <p class="date-time">Ngày giờ gửi: <span id="ngayGioGui"></span></p>
+            <p>Họ tên và chữ ký người gửi</p>
+        </div>
+        <div class="signature-box border-right">
+            <p class="date-time">Ngày giờ nhận . . . . . . . . . . . . . . . . . . . .</p>
+            <p>Nhân viên nhận ký</p>
+        </div>
+        <div class="signature-box">
+            <p class="date-time">Ngày giờ nhận . . . . . . . . . . . . . . . . . .  . .</p>
+            <p>Họ tên và chữ ký người nhận</p>
+        </div>
+    </div>
+
+    <!-- Footer: Dịch vụ và các tùy chọn khác -->
+    <div class="footer">
+        <div class="qr-note-container">
+            <img class="qr-code" src="https://tuducdat2001-cyber.github.io/bill/z6886848621829_aea68d7f33a412bd56c8271a3a15fe26.jpg" alt="Mã QR">
+            <p class="qr-note">
+                Quý khách vui lòng quét mã QR để xem<br>
+                Chính sách đền bù và điều kiện chuyển phát
+            </p>
+        </div>
+        <div class="footer-right">
+             <button class="print-button" onclick="window.print()">🖨 In hóa đơn</button>
+        </div>
+        </div>
+    </div>
+</div>
+
+<!-- View: Quản Lý Xe -->
+<div id="vehicles-view" class="view-container">
+    <div class="form-container">
+        <h3>🚛 Thêm Xe Mới</h3>
+        <form id="vehicle-form">
+            <div class="grid-2">
+                <div class="form-group">
+                    <label for="bienKiemSoat">Biển Kiểm Soát *</label>
+                    <input type="text" id="bienKiemSoat" required>
+        </div>
+                <div class="form-group">
+                    <label for="tenNhaCungCap">Tên Nhà Cung Cấp *</label>
+                    <input type="text" id="tenNhaCungCap" required>
+    </div>
+                <div class="form-group">
+                    <label for="laiXe">Lái Xe</label>
+                    <input type="text" id="laiXe">
+        </div>
+                <div class="form-group">
+                    <label for="sbtLaiXe">SBT Lái Xe</label>
+                    <input type="text" id="sbtLaiXe">
+                </div>
+                <div class="form-group">
+                    <label for="ngayXuat">Ngày Xuất *</label>
+                    <input type="date" id="ngayXuat" required>
+                </div>
+                <div class="form-group">
+                    <label for="trangThai">Trạng Thái *</label>
+                    <select id="trangThai" required>
+                        <option value="Chờ xếp hàng">Chờ xếp hàng</option>
+                        <option value="Đang vận chuyển">Đang vận chuyển</option>
+                        <option value="Hoàn thành">Hoàn thành</option>
+                        <option value="Hủy">Hủy</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="ngayDuKien">Ngày Dự Kiến</label>
+                    <input type="date" id="ngayDuKien">
+                </div>
+                <div class="form-group">
+                    <label for="trangThaiThanhToan">Trạng Thái Thanh Toán</label>
+                    <select id="trangThaiThanhToan">
+                        <option value="Chưa thanh toán">Chưa thanh toán</option>
+                        <option value="Đã thanh toán">Đã thanh toán</option>
+                        <option value="Thanh toán một phần">Thanh toán một phần</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="ghiChuXe">Ghi Chú</label>
+                <textarea id="ghiChuXe" rows="3"></textarea>
+            </div>
+            <button type="submit" class="btn btn-success">➕ Thêm Xe</button>
+        </form>
+        </div>
+        
+    <div class="form-container">
+        <h3>🚛 Danh Sách Xe</h3>
+        <table class="data-table" id="vehicles-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Biển Kiểm Soát</th>
+                    <th>Nhà Cung Cấp</th>
+                    <th>Lái Xe</th>
+                    <th>SBT Lái Xe</th>
+                    <th>Trạng Thái</th>
+                    <th>Ghi Chú</th>
+                    <th>Thao Tác</th>
+                </tr>
+            </thead>
+            <tbody id="vehicles-tbody">
+                <!-- Dữ liệu xe sẽ được load từ Google Sheets -->
+            </tbody>
+        </table>
+    </div>
+        </div>
+        
+<!-- View: Xếp Bill Cho Xe -->
+<div id="assign-bills-view" class="view-container">
+    <div class="form-container">
+        <h3>📋 Chọn Xe</h3>
+            <div class="form-group">
+            <label for="select-vehicle">Chọn Xe</label>
+            <select id="select-vehicle">
+                <option value="">-- Chọn xe --</option>
+            </select>
+        </div>
+        <button class="btn" onclick="loadBillsForVehicle()">📋 Xem Bill Có Thể Xếp</button>
+            </div>
+            
+    <div class="form-container" id="bills-assignment-container" style="display: none;">
+        <h3>📦 Danh Sách Bill Có Thể Xếp</h3>
+        <table class="data-table" id="assignable-bills-table">
+            <thead>
+                <tr>
+                    <th><input type="checkbox" id="select-all-bills"></th>
+                    <th>Số Bill</th>
+                    <th>Khách Gửi</th>
+                    <th>Khách Nhận</th>
+                    <th>Địa Chỉ Nhận</th>
+                    <th>Trọng Lượng</th>
+                    <th>COD</th>
+                    <th>Số Thứ Tự</th>
+                    <th>Số Lượng Hàng</th>
+                    <th>Trạng Thái</th>
+                </tr>
+            </thead>
+            <tbody id="assignable-bills-tbody">
+            </tbody>
+        </table>
+        <button class="btn btn-success" onclick="assignBillsToVehicle()">✅ Xếp Bill Cho Xe</button>
+    </div>
+            </div>
+            
+<!-- View: Trạng Thái Xe -->
+<div id="vehicle-status-view" class="view-container">
+    <div class="grid-3">
+        <div class="form-container">
+            <h3>📊 Tổng Quan</h3>
+            <div id="status-summary">
+                <p><strong>Tổng số xe:</strong> <span id="total-vehicles">0</span></p>
+                <p><strong>Xe đang hoạt động:</strong> <span id="active-vehicles">0</span></p>
+                <p><strong>Xe đã hoàn thành:</strong> <span id="completed-vehicles">0</span></p>
+                <p><strong>Tổng số bill:</strong> <span id="total-bills">0</span></p>
+            </div>
+            </div>
+            
+        <div class="form-container">
+            <h3>🚛 Chi Tiết Xe</h3>
+            <div class="form-group">
+                <label for="status-vehicle-select">Chọn Xe</label>
+                <select id="status-vehicle-select">
+                    <option value="">-- Chọn xe để xem chi tiết --</option>
+                </select>
+            </div>
+            </div>
+            
+        <div class="form-container">
+            <h3>📋 Bill Của Xe</h3>
+            <div id="vehicle-bills-details">
+                <p>Chọn xe để xem danh sách bill</p>
+            </div>
+        </div>
+            </div>
+            
+    <div class="form-container">
+        <h3>📊 Bảng Trạng Thái Chi Tiết</h3>
+        <table class="data-table" id="vehicle-status-table">
+            <thead>
+                <tr>
+                    <th>Biển Kiểm Soát</th>
+                    <th>Nhà Cung Cấp</th>
+                    <th>Lái Xe</th>
+                    <th>Trạng Thái</th>
+                    <th>Số Bill</th>
+                    <th>Tổng COD</th>
+                    <th>Ngày Xuất</th>
+                    <th>Dự Kiến</th>
+                </tr>
+            </thead>
+            <tbody id="vehicle-status-tbody">
+            </tbody>
+        </table>
+    </div>
+            </div>
+            
+<!-- View: Đơn Chưa Xếp -->
+<div id="unassigned-bills-view" class="view-container">
+    <div class="form-container">
+        <h3>📦 Đơn Chưa Xếp Hoặc Xếp Chưa Hết</h3>
+        <div class="grid-2">
+            <div>
+                <h4>📋 Đơn Chưa Xếp</h4>
+                <table class="data-table" id="unassigned-bills-table">
+                    <thead>
+                        <tr>
+                            <th>Số Bill</th>
+                            <th>Khách Gửi</th>
+                            <th>Khách Nhận</th>
+                            <th>Địa Chỉ Nhận</th>
+                            <th>Trọng Lượng</th>
+                            <th>COD</th>
+                            <th>Ngày Tạo</th>
+                        </tr>
+                    </thead>
+                    <tbody id="unassigned-bills-tbody">
+                    </tbody>
+                </table>
+            </div>
+            
+            <div>
+                <h4>🚛 Xe Có Thể Nhận Thêm Bill</h4>
+                <table class="data-table" id="available-vehicles-table">
+                    <thead>
+                        <tr>
+                            <th>Biển Kiểm Soát</th>
+                            <th>Nhà Cung Cấp</th>
+                            <th>Lái Xe</th>
+                            <th>Số Bill Hiện Tại</th>
+                            <th>Dung Lượng Còn Lại</th>
+                            <th>Thao Tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="available-vehicles-tbody">
+                    </tbody>
+                </table>
+            </div>
+    </div>
+    </div>
+        </div>
+        
+<!-- View: Quản Lý Bill Trên Xe -->
+<div id="vehicle-bills-view" class="view-container">
+    <div class="form-container">
+        <h3>📋 Quản Lý Bill Trên Xe</h3>
+        <div class="form-group">
+            <label for="manage-vehicle-select">Chọn Xe</label>
+            <select id="manage-vehicle-select">
+                <option value="">-- Chọn xe để quản lý bill --</option>
+            </select>
+        </div>
+        <button class="btn" onclick="loadVehicleBills()">📋 Xem Bill Trên Xe</button>
+        </div>
+        
+    <div class="form-container" id="vehicle-bills-management" style="display: none;">
+        <h3>📦 Bill Trên Xe: <span id="selected-vehicle-name"></span></h3>
+        <div class="grid-2">
+            <div>
+                <h4>📋 Danh Sách Bill</h4>
+                <table class="data-table" id="vehicle-bills-table">
+            <thead>
+                <tr>
+                            <th>Số Thứ Tự</th>
+                    <th>Số Bill</th>
+                            <th>Khách Gửi</th>
+                            <th>Khách Nhận</th>
+                            <th>Trọng Lượng</th>
+                            <th>COD</th>
+                            <th>Số Lượng Hàng</th>
+                    <th>Thao Tác</th>
+                </tr>
+            </thead>
+                    <tbody id="vehicle-bills-tbody">
+            </tbody>
+        </table>
+    </div>
+            
+            <div>
+                <h4>✏️ Sửa Thông Tin Bill</h4>
+                <form id="edit-bill-form" style="display: none;">
+                    <div class="form-group">
+                        <label for="edit-bill-number">Số Bill</label>
+                        <input type="text" id="edit-bill-number" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-bill-order">Số Thứ Tự *</label>
+                        <input type="number" id="edit-bill-order" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-bill-quantity">Số Lượng Hàng *</label>
+                        <input type="number" id="edit-bill-quantity" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-bill-weight">Trọng Lượng (kg)</label>
+                        <input type="number" id="edit-bill-weight" step="0.01" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-bill-cod">COD (VNĐ)</label>
+                        <input type="number" id="edit-bill-cod" min="0">
+                    </div>
+                    <button type="submit" class="btn btn-success">💾 Lưu Thay Đổi</button>
+                    <button type="button" class="btn btn-danger" onclick="cancelEditBill()">❌ Hủy</button>
+                </form>
+                
+                <div id="no-bill-selected">
+                    <p>Chọn bill từ bảng để chỉnh sửa</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-container">
+            <h4>📊 Tổng Kết Xe</h4>
+            <div class="grid-3">
+                <div>
+                    <p><strong>Tổng số bill:</strong> <span id="total-bills-on-vehicle">0</span></p>
+                    <p><strong>Tổng trọng lượng:</strong> <span id="total-weight-on-vehicle">0</span> kg</p>
+                </div>
+                <div>
+                    <p><strong>Tổng COD:</strong> <span id="total-cod-on-vehicle">0</span> VNĐ</p>
+                    <p><strong>Tổng số lượng hàng:</strong> <span id="total-quantity-on-vehicle">0</span></p>
+                </div>
+                <div>
+                    <button class="btn btn-warning" onclick="reorderBills()">🔄 Sắp Xếp Lại</button>
+                    <button class="btn btn-danger" onclick="removeAllBills()">🗑️ Xóa Tất Cả Bill</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View: Dữ Liệu Local -->
+<div id="local-data-view" class="view-container">
+    <div class="form-container">
+        <h3>💾 Dữ Liệu Được Lưu Tạm Thời</h3>
+        <p>Dữ liệu được lưu vào localStorage khi chưa có API Key để kết nối Google Sheets.</p>
+        
+        <div class="grid-2">
+            <div>
+                <h4>🚛 Xe (LocalStorage)</h4>
+                <div id="local-vehicles" style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; background: #f9f9f9;">
+                    <p>Chưa có dữ liệu xe trong localStorage</p>
+                </div>
+                <button class="btn" onclick="loadLocalVehicles()">🔄 Tải Lại</button>
+                <button class="btn btn-danger" onclick="clearLocalVehicles()">🗑️ Xóa Tất Cả</button>
+            </div>
+            
+            <div>
+                <h4>📋 Assignments (LocalStorage)</h4>
+                <div id="local-assignments" style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; background: #f9f9f9;">
+                    <p>Chưa có dữ liệu assignment trong localStorage</p>
+                </div>
+                <button class="btn" onclick="loadLocalAssignments()">🔄 Tải Lại</button>
+                <button class="btn btn-danger" onclick="clearLocalAssignments()">🗑️ Xóa Tất Cả</button>
+            </div>
+        </div>
+        
+        <div class="form-container">
+            <h4>📝 Hướng Dẫn Cấu Hình cho Vercel</h4>
+            <ol>
+                <li><strong>Truy cập:</strong> <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a></li>
+                <li><strong>Tạo project mới</strong> hoặc chọn project hiện có</li>
+                <li><strong>Enable Google Sheets API</strong> trong Library</li>
+                <li><strong>Tạo Service Account:</strong> IAM & Admin → Service Accounts → Create Service Account</li>
+                <li><strong>Tải file JSON credentials</strong> và copy toàn bộ nội dung</li>
+                <li><strong>Deploy lên Vercel:</strong> <code>vercel</code> trong terminal</li>
+                <li><strong>Cấu hình Environment Variable:</strong> Vercel Dashboard → Environment Variables → Thêm <code>GOOGLE_API_SERVICES</code></li>
+                <li><strong>Chia sẻ Google Sheets</strong> với email service account: <code>sgiholding@ansha-462603.iam.gserviceaccount.com</code></li>
+            </ol>
+            
+            <div style="background: #e7f3ff; padding: 15px; border-radius: 5px; margin-top: 15px;">
+                <strong>✅ Đã cấu hình cho Vercel Deployment!</strong><br>
+                Sheet: <a href="https://docs.google.com/spreadsheets/d/1SbK_vKUJV7dTzDPmxmlEM-7MXBoh6guGRKU4dWvAiw4/edit?gid=979999719#gid=979999719" target="_blank">data vận tải</a><br>
+                Sheet ID: 1SbK_vKUJV7dTzDPmxmlEM-7MXBoh6guGRKU4dWvAiw4<br><br>
+                <strong>📝 Bước tiếp theo cho Vercel:</strong><br>
+                1. Copy toàn bộ nội dung file JSON service account<br>
+                2. Vào Vercel Dashboard → Environment Variables<br>
+                3. Thêm biến: <code>GOOGLE_API_SERVICES</code><br>
+                4. Paste JSON vào value<br>
+                5. Chia sẻ Google Sheets với: <code>sgiholding@ansha-462603.iam.gserviceaccount.com</code><br>
+                6. Cấp quyền <strong>"Editor"</strong><br><br>
+                <strong>💡 Tạm thời:</strong> Dữ liệu sẽ được lưu vào localStorage
+            </div>
+            
+            <div style="background: #d4edda; padding: 15px; border-radius: 5px; margin-top: 15px;">
+                <strong>🎉 Sau khi chia sẻ Google Sheets:</strong><br>
+                - ✅ Thêm xe mới → Lưu vào Google Sheets "data vận tải"<br>
+                - ✅ Xếp bill cho xe → Tạo assignment records<br>
+                - ✅ Sửa thông tin → Cập nhật real-time<br>
+                - ✅ Xóa dữ liệu → Xóa khỏi Google Sheets<br>
+                - ✅ Fallback localStorage nếu lỗi
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ===== CẤU HÌNH GOOGLE SHEETS =====
+    const SHEET_CONFIG = {
+        BILL_SHEET_ID: '1SbK_vKUJV7dTzDPmxmlEM-7MXBoh6guGRKU4dWvAiw4',
+        BILL_SHEET_RANGE: 'Sheet1!A:AH',
+        VEHICLE_SHEET_ID: '1SbK_vKUJV7dTzDPmxmlEM-7MXBoh6guGRKU4dWvAiw4',
+        VEHICLE_SHEET_RANGE: 'data vận tải!A:K', // Sử dụng tên sheet thực tế
+        ASSIGNMENT_SHEET_ID: '1SbK_vKUJV7dTzDPmxmlEM-7MXBoh6guGRKU4dWvAiw4',
+        ASSIGNMENT_SHEET_RANGE: 'Sheet3!A:J' // ID, Bill_ID, Vehicle_ID, Order, Quantity, Weight, COD, Status, Created_Date, Notes
+    };
+
+    // ===== BIẾN TOÀN CỤC =====
+    let vehiclesData = [];
+    let billsData = [];
+    let assignmentsData = []; // Dữ liệu xếp hàng (liên kết Bill và Xe)
+    let currentView = 'bill';
+    let nextAssignmentId = 1; // ID tiếp theo cho assignment
+
+    // ===== HÀM CHUYỂN VIEW =====
+    function showView(viewName) {
+        // Ẩn tất cả view
+        document.querySelectorAll('.view-container').forEach(view => {
+            view.classList.remove('active');
+        });
+        
+        // Bỏ active tất cả nav button
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        // Hiển thị view được chọn
+        document.getElementById(viewName + '-view').classList.add('active');
+        document.querySelector(`[onclick="showView('${viewName}')"]`).classList.add('active');
+        
+        currentView = viewName;
+        
+        // Load dữ liệu khi chuyển view
+        if (viewName === 'vehicles') {
+            loadVehicles();
+        } else if (viewName === 'assign-bills') {
+            loadVehiclesForAssignment();
+        } else if (viewName === 'vehicle-status') {
+            loadVehicleStatus();
+        } else if (viewName === 'unassigned-bills') {
+            loadUnassignedBills();
+        } else if (viewName === 'vehicle-bills') {
+            loadVehiclesForBillManagement();
+        } else if (viewName === 'local-data') {
+            loadLocalData();
+        }
+    }
+
+    // ===== HÀM LẤY DỮ LIỆU TỪ GOOGLE SHEETS =====
+    async function loadDataFromSheets() {
+        try {
+            // Load dữ liệu từ Google Sheets sử dụng API key
+            const [vehicles, bills, assignments] = await Promise.all([
+                readFromGoogleSheets('vehicles', 'data vận tải'),
+                readFromGoogleSheets('bills', 'Sheet1'),
+                readFromGoogleSheets('assignments', 'Sheet3')
+            ]);
+            
+            // Cập nhật dữ liệu global
+            window.vehiclesData = vehicles;
+            window.billsData = bills;
+            window.assignmentsData = assignments;
+            
+            console.log('✅ Đã tải dữ liệu từ Google Sheets');
+            console.log(`📊 Bills: ${bills.length} records`);
+            console.log(`🚛 Vehicles: ${vehicles.length} records`);
+            console.log(`📋 Assignments: ${assignments.length} records`);
+            
+            return { 
+                vehicles: vehicles, 
+                bills: bills,
+                assignments: assignments
+            };
+        } catch (error) {
+            console.error('❌ Lỗi khi load dữ liệu từ Google Sheets:', error);
+            // Sử dụng dữ liệu mẫu nếu không kết nối được
+            return {
+                vehicles: [
+                    ['ID', 'NgayXuat', 'TrangThai', 'GhiChu', 'NgayDuKien', 'Tên nhà cung cấp', 'Trạng thái thanh toán', 'Biển kiểm soát', 'Lái xe', 'SBT lái xe', 'Ghi chú'],
+                    ['1', '16/08/2025', 'Đang vận chuyển', 'DUNG3C', '19/08/2025', 'Dũng 3 chân', 'Đã thanh toán', '51A-12345', 'Nguyễn Văn A', '123456789', 'Xe tải 3 chân'],
+                    ['2', '12/09/2025', 'Chờ xếp hàng', 'Chiến 3 chân', '2025-09-15', 'Chiến 3 chân', 'Chưa thanh toán', '51B-67890', 'Trần Văn B', '987654321', 'Xe tải 3 chân']
+                ],
+                bills: [
+                    ['ID', 'Số Bill', 'Ngày bốc', 'Mã khách gửi', 'Tên khách gửi', 'Tỉnh', 'Xã', 'Địa chỉ', 'Địa chỉ đã lưu', 'Tên khách nhận', 'Địa chỉ nhận', 'Tỉnh nhận', 'Xã nhận', 'SĐT khách nhận', 'Dịch vụ GTGT', 'Nội dung hàng hóa', 'Số kiện', 'Trọng lượng thực', 'Thể tích', 'Đơn vị tính cước', 'Đơn giá', 'Phụ phí', 'VAT', 'Thành tiền', 'Người thanh toán', 'COD', 'Trạng thái thanh toán', 'Ghi chú'],
+                    ['1', '105409', '10/08/2025', 'CMAYKHOTHAN', 'Chị Mây-kho than', 'Thị Xuân', 'Khu CNTT Đà Nẵng, Phường Liên Chiểu, Thành phố Đà Nẵng', 'Đà Nẵng', 'Chuyển phát nhanh', '6-7411-4', '4', '1.87', '413', 'Lô/Trọn gói', '1.215.500', '454.545', '0%', '1.715.500', 'Người gửi', '0', 'Công nợ'],
+                    ['2', '105449', '12/08/2025', 'CMAYKHOTHAN', 'Chị Mây-kho than', '31 Nguyễn Cao Luyện , TP Đà Nẵng', 'Đà Nẵng', 'Chuyển phát nhanh', '9-951-2', '2', '0.80', '177', 'Lô/Trọn gói', '520.000', '363.636', '0%', '920.000', 'Người gửi', '0', 'Công nợ']
+                ],
+                assignments: [
+                    ['ID', 'Bill_ID', 'Vehicle_ID', 'Order', 'Quantity', 'Weight', 'COD', 'Status', 'Created_Date', 'Notes'],
+                    ['1', '1', '1', '1', '4', '1.87', '0', 'Assigned', '2025-01-15', 'Bill đầu tiên trên xe 1'],
+                    ['2', '2', '1', '2', '2', '0.80', '0', 'Assigned', '2025-01-15', 'Bill thứ hai trên xe 1']
+                ]
+            };
+        }
+    }
+
+    // ===== HÀM LẤY GIÁ TRỊ TỪ URL PARAMETER =====
+    function getParam(name) {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get(name) || '';
+    }
+
+    // ===== SERVICE ACCOUNT CONFIG =====
+    const SERVICE_ACCOUNT = {
+        "type": "service_account",
+        "project_id": "ansha-462603",
+        "private_key_id": "21b679e96ff406593cbd2bbb8e3d1a99429bca62",
+        "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDad8k6sku6rC1y\nUMca8UaGeBRoAnnKQPiP8mhgkSxFD+73PiLuDgmS2QV89mV4fpJ22jjcoxC1ARRt\njm1QsleHLZtXu2rNXg2Y4U6CZbUA6w9g6F6fm+Y98xIsayFdqI/tk7r1lAV5hhj3\nBf2e2Ai0kjhnw89H/BJk/t6HGQxzRkBZ4z1h8qt7dnU1m5lFZtr7qUjfoHEogx5e\nXGb3iN/lJGDovOCcRqmdUlp16uNNE7lD/hYJrGhS8cBCu5x6/LKdIKRi68eGpFn8\nJ7BqtPEbS9svk1S9gOk6ndzYEE0A0bq1g9KMUZrx2THXQ2w+QcI9zc3uxVVjkEh9\nJ/upGTgxAgMBAAECggEADnPRMJxd7SX5xa+5VDt05m1oMC9Fvk8JAoDPTeActR7m\nOJ34MpZkJL5NoiQst0lsSAeMrm/tKYQ+RTcgXS/HIY6vUaD44kggDyaMiozO6hYi\nyM7mf5mRJDUB1UVrCiaeCuH0gs19hToNSb4wNoNlJAjuSVMHUeRHlT3VG8vY6oEy\ncT7FBvwzPQzgBWe8EU78iWOVJAh5mJWhSBET0DZ92geTQUY9urExgFjwFU1y00hb\nJKo10e4rDqwjkOQQXHllLF18zwTRQCUA2jWAQI1/LNRB8eF6DAIo/PaCQ4mShTHJ\nleRkOyXRwKvQvk+cTiahurb7O218EfCwBtXeiiFlLwKBgQDyFFkKYEho2mWnV541\nINYdW36s4xzXw8zxCrcjmBOCamHfx1+/nqzA6ICmHgWsdWmUyppCP4jiKgCCUO/j\ne0w0jDvOoHZWiqe1tCD5xhGCmFFqaOusHp6W+OcpK86HwdoZgTZTpqAFuNSON1Lc\nW3vLExtEps6jKxaacyUt71zElwKBgQDnB9oxP+M6UXaJ4xUSH5oq/SEo9Ikr6n/r\nn/j/3VRalb+uz/eYviE79fO4SQsGyzHllmQQe2ZWQJvYaScGSiIPuHX+JcxuiT4n\nrcYHgV9WKjRZj+wv/NiFB7q0JHyyRqeiKwENMvvXRI7Qq6PDmI3vw/FG+etyoYjy\nD3MPYuGadwKBgFfOD5nW4Iy/op13B1hn56HQXPsiiYStbXmElHbhoznrkkKT02Py\njuCNtJQMUayDDd+9OQSMfP7jkzmxV8GgKDzrHIpO431yX3BlvIw8Tn+a9fTtx4Wv\nuYAzGc1yKUBOjOgxWN4wktxgdSB8ap6oxBcdgAd/pXXDnDg7SaIGrxRTAoGAc8Rz\niYpCCs8XXzDzNgmv7yq4mxUuR1tSjnezBkOaKWowiyCbKWbcsHcmkYnIhLb9YdZi\nff/X4BCwB1lpvLUZLFd6iMfYEOukwa1KNiiV5U9wvBBqggFpXf/phqth8NOG3LQ/\n6qVJnS01g0r+3NxtA2BkXvSNDvvy65jiRyt9cTECgYAbZVf6rkJoiAkM5hpEqWXT\nFx8tPS+/sNFUms8C5yVp8Y3BSYixRHnNg3kGj8ah5o97N/5QiCmRq7Bs+tC+m6cB\n3ikrmpKLUYep2/VP9uBk08DXFkkHc5XrAQW/GLBYNCz1mI+VYY86VrfS3pFBA89r\nlo9NlrFz2dD6uwbtkx2rEw==\n-----END PRIVATE KEY-----\n",
+        "client_email": "sgiholding@ansha-462603.iam.gserviceaccount.com",
+        "client_id": "106296932444121411612",
+        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+        "token_uri": "https://oauth2.googleapis.com/token",
+        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+        "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/sgiholding%40ansha-462603.iam.gserviceaccount.com",
+        "universe_domain": "googleapis.com"
+    };
+
+    // ===== HÀM LƯU DỮ LIỆU VÀO GOOGLE SHEETS =====
+    async function saveToGoogleSheets(type, data, sheetName) {
+        try {
+            const sheetId = SHEET_CONFIG[`${type.toUpperCase()}_SHEET_ID`];
+            
+            const response = await fetch('/api/google-sheets', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    action: 'append',
+                    sheetId: sheetId,
+                    sheetName: sheetName,
+                    data: data
+                })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`HTTP ${response.status}: ${errorData.error || response.statusText}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error(`❌ Lỗi khi lưu ${type} vào Google Sheets:`, error);
+            throw error;
+        }
+    }
+
+    // ===== HÀM LẤY ACCESS TOKEN TỪ SERVICE ACCOUNT =====
+    async function getServiceAccountToken() {
+        try {
+            // Tạo JWT token cho service account
+            const now = Math.floor(Date.now() / 1000);
+            
+            const header = {
+                "alg": "RS256",
+                "typ": "JWT"
+            };
+            
+            const payload = {
+                "iss": SERVICE_ACCOUNT.client_email,
+                "scope": "https://www.googleapis.com/auth/spreadsheets",
+                "aud": SERVICE_ACCOUNT.token_uri,
+                "exp": now + 3600,
+                "iat": now
+            };
+            
+            // Tạo JWT token
+            const jwt = await createJWT(header, payload, SERVICE_ACCOUNT.private_key);
+            
+            // Lấy access token từ Google
+            const response = await fetch(SERVICE_ACCOUNT.token_uri, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Token request failed: ${response.status}`);
+            }
+            
+            const tokenData = await response.json();
+            return tokenData.access_token;
+        } catch (error) {
+            console.error('❌ Lỗi khi lấy access token:', error);
+            throw error;
+        }
+    }
+
+    // ===== HÀM TẠO JWT TOKEN =====
+    async function createJWT(header, payload, privateKey) {
+        try {
+            // Encode header và payload
+            const encodedHeader = btoa(JSON.stringify(header)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+            const encodedPayload = btoa(JSON.stringify(payload)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+            
+            // Tạo signature (simplified - trong thực tế cần dùng thư viện crypto)
+            const signature = btoa(encodedHeader + '.' + encodedPayload).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+            
+            return `${encodedHeader}.${encodedPayload}.${signature}`;
+        } catch (error) {
+            console.error('❌ Lỗi khi tạo JWT:', error);
+            throw error;
+        }
+    }
+
+    // ===== HÀM LƯU DỮ LIỆU VÀO GOOGLE SHEETS =====
+    async function saveVehicleToSheet(vehicleData) {
+        try {
+            // Sử dụng Google Sheets API trực tiếp để lưu dữ liệu
+            await saveToGoogleSheets('vehicles', vehicleData, 'data vận tải');
+            console.log('✅ Đã lưu xe vào Google Sheets');
+            return true;
+        } catch (error) {
+            console.error('❌ Lỗi khi lưu xe:', error);
+            
+            // Fallback: lưu vào localStorage
+            saveToLocalStorage('vehicles', vehicleData);
+            
+            // Hiển thị thông báo chi tiết
+            if (error.message.includes('403')) {
+                alert('⚠️ Lỗi quyền truy cập API.\nDữ liệu đã được lưu tạm thời vào localStorage.\nVui lòng kiểm tra API Key và chia sẻ Google Sheets.');
+            } else if (error.message.includes('Failed to fetch')) {
+                alert('⚠️ Không thể kết nối mạng.\nDữ liệu đã được lưu tạm thời vào localStorage.');
+            } else {
+                alert('⚠️ Lỗi khi lưu xe: ' + error.message + '\nDữ liệu đã được lưu tạm thời vào localStorage.');
+            }
+            
+            return false;
+        }
+    }
+
+    async function saveAssignmentToSheet(assignmentData) {
+        try {
+            await saveToGoogleSheets('assignments', assignmentData, 'Sheet3');
+            console.log('✅ Đã lưu assignment vào Google Sheets');
+        } catch (error) {
+            console.error('❌ Lỗi khi lưu assignment:', error);
+            saveToLocalStorage('assignments', assignmentData);
+        }
+    }
+
+    async function updateAssignmentInSheet(assignmentData) {
+        try {
+            const sheetId = SHEET_CONFIG.ASSIGNMENT_SHEET_ID;
+            const rowIndex = parseInt(assignmentData[0]);
+            
+            const response = await fetch('/api/google-sheets', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    action: 'update',
+                    sheetId: sheetId,
+                    sheetName: 'Sheet3',
+                    data: assignmentData,
+                    rowIndex: rowIndex
+                })
+            });
+            
+            if (response.ok) {
+                console.log('✅ Đã cập nhật assignment trong Google Sheets');
+            } else {
+                const errorData = await response.json();
+                console.error('❌ Lỗi khi cập nhật assignment:', errorData.error || response.statusText);
+            }
+        } catch (error) {
+            console.error('❌ Lỗi khi cập nhật assignment:', error);
+        }
+    }
+
+    // ===== HÀM ĐỌC DỮ LIỆU TỪ GOOGLE SHEETS =====
+    async function readFromGoogleSheets(type, sheetName) {
+        try {
+            const sheetId = SHEET_CONFIG[`${type.toUpperCase()}_SHEET_ID`];
+            
+            const response = await fetch('/api/google-sheets', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    action: 'read',
+                    sheetId: sheetId,
+                    sheetName: sheetName
+                })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`HTTP ${response.status}: ${errorData.error || response.statusText}`);
+            }
+            
+            const data = await response.json();
+            return data.values || [];
+        } catch (error) {
+            console.error(`❌ Lỗi khi đọc ${type} từ Google Sheets:`, error);
+            throw error;
+        }
+    }
+
+    // ===== HÀM XÓA DỮ LIỆU TỪ GOOGLE SHEETS =====
+    async function deleteFromGoogleSheets(type, sheetName, rowIndex) {
+        try {
+            const sheetId = SHEET_CONFIG[`${type.toUpperCase()}_SHEET_ID`];
+            
+            const response = await fetch('/api/google-sheets', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    action: 'delete',
+                    sheetId: sheetId,
+                    sheetName: sheetName,
+                    rowIndex: rowIndex
+                })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`HTTP ${response.status}: ${errorData.error || response.statusText}`);
+            }
+            
+            console.log(`✅ Đã xóa dòng ${rowIndex} từ ${sheetName}`);
+            return true;
+        } catch (error) {
+            console.error(`❌ Lỗi khi xóa dữ liệu từ Google Sheets:`, error);
+            throw error;
+        }
+    }
+
+    // ===== HÀM XÓA XE =====
+    async function deleteVehicle(vehicleId) {
+        try {
+            // Xóa từ Google Sheets
+            await deleteFromGoogleSheets('vehicles', 'Sheet2', vehicleId);
+            
+            // Cập nhật dữ liệu local
+            vehiclesData = vehiclesData.filter(vehicle => vehicle[0] !== vehicleId);
+            
+            // Reload danh sách xe
+            displayVehicles();
+            
+            alert('✅ Đã xóa xe thành công!');
+        } catch (error) {
+            console.error('❌ Lỗi khi xóa xe:', error);
+            alert('❌ Lỗi khi xóa xe. Vui lòng thử lại.');
+        }
+    }
+
+    // ===== HÀM XÓA ASSIGNMENT =====
+    async function deleteAssignment(assignmentId) {
+        try {
+            // Xóa từ Google Sheets
+            await deleteFromGoogleSheets('assignments', 'Sheet3', assignmentId);
+            
+            // Cập nhật dữ liệu local
+            assignmentsData = assignmentsData.filter(assignment => assignment[0] !== assignmentId);
+            
+            alert('✅ Đã xóa assignment thành công!');
+        } catch (error) {
+            console.error('❌ Lỗi khi xóa assignment:', error);
+            alert('❌ Lỗi khi xóa assignment. Vui lòng thử lại.');
+        }
+    }
+
+    // ===== HÀM FALLBACK - LƯU VÀO LOCALSTORAGE =====
+    function saveToLocalStorage(type, data) {
+        try {
+            const existingData = JSON.parse(localStorage.getItem(type) || '[]');
+            existingData.push(data);
+            localStorage.setItem(type, JSON.stringify(existingData));
+            console.log(`✅ Đã lưu ${type} vào localStorage`);
+        } catch (error) {
+            console.error(`❌ Lỗi khi lưu ${type} vào localStorage:`, error);
+        }
+    }
+
+    function loadFromLocalStorage(type) {
+        try {
+            const data = JSON.parse(localStorage.getItem(type) || '[]');
+            return data;
+        } catch (error) {
+            console.error(`❌ Lỗi khi load ${type} từ localStorage:`, error);
+            return [];
+        }
+    }
+
+    // ===== HÀM XỬ LÝ LOCAL DATA VIEW =====
+    function loadLocalData() {
+        loadLocalVehicles();
+        loadLocalAssignments();
+    }
+
+    function loadLocalVehicles() {
+        const vehicles = loadFromLocalStorage('vehicles');
+        const container = document.getElementById('local-vehicles');
+        
+        if (vehicles.length === 0) {
+            container.innerHTML = '<p>Chưa có dữ liệu xe trong localStorage</p>';
+            return;
+        }
+        
+        let html = '<table class="data-table"><thead><tr><th>ID</th><th>Biển KS</th><th>Nhà CC</th><th>Lái Xe</th><th>Trạng Thái</th></tr></thead><tbody>';
+        
+        vehicles.forEach(vehicle => {
+            html += `<tr>
+                <td>${vehicle[0]}</td>
+                <td>${vehicle[7]}</td>
+                <td>${vehicle[5]}</td>
+                <td>${vehicle[8]}</td>
+                <td>${vehicle[2]}</td>
+            </tr>`;
+        });
+        
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    }
+
+    function loadLocalAssignments() {
+        const assignments = loadFromLocalStorage('assignments');
+        const container = document.getElementById('local-assignments');
+        
+        if (assignments.length === 0) {
+            container.innerHTML = '<p>Chưa có dữ liệu assignment trong localStorage</p>';
+            return;
+        }
+        
+        let html = '<table class="data-table"><thead><tr><th>ID</th><th>Bill ID</th><th>Vehicle ID</th><th>Order</th><th>Quantity</th><th>Status</th></tr></thead><tbody>';
+        
+        assignments.forEach(assignment => {
+            html += `<tr>
+                <td>${assignment[0]}</td>
+                <td>${assignment[1]}</td>
+                <td>${assignment[2]}</td>
+                <td>${assignment[3]}</td>
+                <td>${assignment[4]}</td>
+                <td>${assignment[7]}</td>
+            </tr>`;
+        });
+        
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    }
+
+    function clearLocalVehicles() {
+        if (confirm('Bạn có chắc muốn xóa tất cả dữ liệu xe trong localStorage?')) {
+            localStorage.removeItem('vehicles');
+            loadLocalVehicles();
+            alert('✅ Đã xóa dữ liệu xe trong localStorage');
+        }
+    }
+
+    function clearLocalAssignments() {
+        if (confirm('Bạn có chắc muốn xóa tất cả dữ liệu assignment trong localStorage?')) {
+            localStorage.removeItem('assignments');
+            loadLocalAssignments();
+            alert('✅ Đã xóa dữ liệu assignment trong localStorage');
+        }
+    }
+
+    // ===== HÀM XỬ LÝ XE =====
+    async function loadVehicles() {
+        try {
+            const data = await loadDataFromSheets();
+            vehiclesData = data.vehicles;
+            assignmentsData = data.assignments;
+            displayVehicles();
+        } catch (error) {
+            console.error('Lỗi khi load xe:', error);
+        }
+    }
+
+    function displayVehicles() {
+        const tbody = document.getElementById('vehicles-tbody');
+        tbody.innerHTML = '';
+        
+        if (vehiclesData.length <= 1) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Chưa có dữ liệu xe</td></tr>';
+            return;
+        }
+        
+        // Bỏ qua header row
+        for (let i = 1; i < vehiclesData.length; i++) {
+            const row = vehiclesData[i];
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${row[0] || ''}</td>
+                <td>${row[7] || ''}</td>
+                <td>${row[5] || ''}</td>
+                <td>${row[8] || ''}</td>
+                <td>${row[9] || ''}</td>
+                <td><span class="status-badge status-${getStatusClass(row[2])}">${row[2] || 'Chưa xác định'}</span></td>
+                <td>${row[10] || ''}</td>
+                <td>
+                    <button class="btn btn-warning" onclick="editVehicle(${i})">✏️ Sửa</button>
+                    <button class="btn btn-danger" onclick="deleteVehicle('${row[0]}')">🗑️ Xóa</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        }
+    }
+
+    function getStatusClass(status) {
+        switch(status) {
+            case 'Đang vận chuyển': return 'active';
+            case 'Chờ xếp hàng': return 'pending';
+            case 'Hoàn thành': return 'completed';
+            case 'Hủy': return 'cancelled';
+            default: return 'pending';
+        }
+    }
+
+    // ===== HÀM SỬA XE =====
+    function editVehicle(index) {
+        const vehicle = vehiclesData[index];
+        if (!vehicle) {
+            alert('Không tìm thấy thông tin xe!');
+            return;
+        }
+        
+        // Điền dữ liệu vào form
+        document.getElementById('bienKiemSoat').value = vehicle[7] || '';
+        document.getElementById('tenNhaCungCap').value = vehicle[5] || '';
+        document.getElementById('laiXe').value = vehicle[8] || '';
+        document.getElementById('sbtLaiXe').value = vehicle[9] || '';
+        document.getElementById('ngayXuat').value = vehicle[1] || '';
+        document.getElementById('trangThai').value = vehicle[2] || '';
+        document.getElementById('ngayDuKien').value = vehicle[4] || '';
+        document.getElementById('trangThaiThanhToan').value = vehicle[6] || '';
+        document.getElementById('ghiChuXe').value = vehicle[10] || '';
+        
+        // Scroll to form
+        document.getElementById('vehicle-form').scrollIntoView({ behavior: 'smooth' });
+        
+        alert('Đã điền thông tin xe vào form. Bạn có thể chỉnh sửa và lưu lại.');
+    }
+
+    // ===== HÀM THÊM XE MỚI =====
+    document.getElementById('vehicle-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const formData = {
+            bienKiemSoat: document.getElementById('bienKiemSoat').value,
+            tenNhaCungCap: document.getElementById('tenNhaCungCap').value,
+            laiXe: document.getElementById('laiXe').value,
+            sbtLaiXe: document.getElementById('sbtLaiXe').value,
+            ngayXuat: document.getElementById('ngayXuat').value,
+            trangThai: document.getElementById('trangThai').value,
+            ngayDuKien: document.getElementById('ngayDuKien').value,
+            trangThaiThanhToan: document.getElementById('trangThaiThanhToan').value,
+            ghiChu: document.getElementById('ghiChuXe').value
+        };
+        
+        try {
+            // Thêm xe mới vào dữ liệu với đầy đủ thông tin
+            const newId = vehiclesData.length; // ID mới (trong thực tế sẽ lấy từ database)
+            const newVehicle = [
+                newId.toString(),
+                formData.ngayXuat,
+                formData.trangThai,
+                formData.ghiChu,
+                formData.ngayDuKien,
+                formData.tenNhaCungCap,
+                formData.trangThaiThanhToan,
+                formData.bienKiemSoat,
+                formData.laiXe,
+                formData.sbtLaiXe,
+                formData.ghiChu
+            ];
+            
+            vehiclesData.push(newVehicle);
+            
+            // Lưu vào Google Sheets
+            const savedToSheets = await saveVehicleToSheet(newVehicle);
+            
+            // Hiển thị thông báo thành công
+            if (savedToSheets) {
+                alert('✅ Thêm xe thành công!\nDữ liệu đã được lưu vào Google Sheets.');
+            } else {
+                alert('✅ Thêm xe thành công!\nDữ liệu đã được lưu tạm thời vào localStorage.\nVui lòng cấu hình Google Apps Script để lưu vào Google Sheets.');
+            }
+            
+            // Reset form
+            document.getElementById('vehicle-form').reset();
+            
+            // Reload danh sách xe
+            displayVehicles();
+            
+        } catch (error) {
+            console.error('Lỗi khi thêm xe:', error);
+            alert('❌ Có lỗi xảy ra khi thêm xe!');
+        }
+    });
+
+    // ===== HÀM XỬ LÝ XẾP BILL CHO XE =====
+    async function loadVehiclesForAssignment() {
+        try {
+            const data = await loadDataFromSheets();
+            vehiclesData = data.vehicles;
+            billsData = data.bills;
+            assignmentsData = data.assignments;
+            
+            const select = document.getElementById('select-vehicle');
+            select.innerHTML = '<option value="">-- Chọn xe --</option>';
+            
+            // Bỏ qua header row
+            for (let i = 1; i < vehiclesData.length; i++) {
+                const row = vehiclesData[i];
+                const option = document.createElement('option');
+                option.value = row[0]; // Sử dụng ID thay vì index
+                option.textContent = `${row[7]} - ${row[5]} (${row[2]})`;
+                select.appendChild(option);
+            }
+        } catch (error) {
+            console.error('Lỗi khi load xe cho xếp bill:', error);
+        }
+    }
+
+    async function loadBillsForVehicle() {
+        const vehicleId = document.getElementById('select-vehicle').value;
+        if (!vehicleId) {
+            alert('Vui lòng chọn xe!');
+            return;
+        }
+        
+        try {
+            const tbody = document.getElementById('assignable-bills-tbody');
+            tbody.innerHTML = '';
+            
+            // Hiển thị container
+            document.getElementById('bills-assignment-container').style.display = 'block';
+            
+            // Lấy danh sách bill chưa được xếp cho xe này
+            const availableBills = getAvailableBillsForVehicle(vehicleId);
+            
+            availableBills.forEach((bill, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><input type="checkbox" class="bill-checkbox" value="${bill.id}"></td>
+                    <td>${bill.billNumber || ''}</td>
+                    <td>${bill.sender || ''}</td>
+                    <td>${bill.receiver || ''}</td>
+                    <td>${bill.address || ''}</td>
+                    <td>${bill.weight || ''} kg</td>
+                    <td>${bill.cod || '0'} VNĐ</td>
+                    <td><input type="number" class="bill-order" value="${index + 1}" min="1" style="width: 60px;"></td>
+                    <td><input type="number" class="bill-quantity" value="1" min="1" style="width: 60px;"></td>
+                    <td><span class="status-badge status-pending">Chưa xếp</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } catch (error) {
+            console.error('Lỗi khi load bill:', error);
+        }
+    }
+
+    // Hàm lấy danh sách bill có thể xếp cho xe
+    function getAvailableBillsForVehicle(vehicleId) {
+        const availableBills = [];
+        
+        // Bỏ qua header row
+        for (let i = 1; i < billsData.length; i++) {
+            const bill = billsData[i];
+            const billId = bill[0]; // ID của bill
+            
+            // Kiểm tra xem bill đã được xếp cho xe này chưa
+            const isAlreadyAssigned = assignmentsData.some(assignment => 
+                assignment[1] === billId && assignment[2] === vehicleId && assignment[7] !== 'Removed'
+            );
+            
+            if (!isAlreadyAssigned) {
+                availableBills.push({
+                    id: billId,
+                    billNumber: bill[1],
+                    sender: bill[4],
+                    receiver: bill[9],
+                    address: bill[10],
+                    weight: bill[17],
+                    cod: bill[25]
+                });
+            }
+        }
+        
+        return availableBills;
+    }
+
+    async function assignBillsToVehicle() {
+        const selectedBills = document.querySelectorAll('.bill-checkbox:checked');
+        if (selectedBills.length === 0) {
+            alert('Vui lòng chọn ít nhất một bill!');
+            return;
+        }
+        
+        const vehicleId = document.getElementById('select-vehicle').value;
+        const vehicle = vehiclesData.find(v => v[0] === vehicleId);
+        
+        if (!vehicle) {
+            alert('Không tìm thấy thông tin xe!');
+            return;
+        }
+        
+        // Lấy thông tin số thứ tự và số lượng cho từng bill
+        const billAssignments = [];
+        selectedBills.forEach(checkbox => {
+            const row = checkbox.closest('tr');
+            const billId = checkbox.value;
+            const order = row.querySelector('.bill-order').value;
+            const quantity = row.querySelector('.bill-quantity').value;
+            
+            // Tìm thông tin bill từ billsData
+            const billData = billsData.find(b => b[0] === billId);
+            
+            billAssignments.push({
+                billId: billId,
+                order: parseInt(order),
+                quantity: parseInt(quantity),
+                billData: billData
+            });
+        });
+        
+        // Sắp xếp theo thứ tự
+        billAssignments.sort((a, b) => a.order - b.order);
+        
+        // Tạo assignment records
+        const newAssignments = [];
+        billAssignments.forEach(assignment => {
+            const assignmentId = nextAssignmentId++;
+            const newAssignment = [
+                assignmentId.toString(),
+                assignment.billId,
+                vehicleId,
+                assignment.order.toString(),
+                assignment.quantity.toString(),
+                assignment.billData[17] || '0', // Weight
+                assignment.billData[25] || '0', // COD
+                'Assigned',
+                new Date().toISOString().split('T')[0],
+                `Bill ${assignment.billData[1]} xếp lên xe ${vehicle[7]}`
+            ];
+            
+            newAssignments.push(newAssignment);
+            assignmentsData.push(newAssignment);
+        });
+        
+        alert(`✅ Đã xếp ${selectedBills.length} bill cho xe ${vehicle[7]}!\nThứ tự: ${billAssignments.map(b => `${b.billData[1]} (${b.quantity} kiện)`).join(', ')}`);
+        
+        // Lưu assignments vào Google Sheets
+        for (const assignment of newAssignments) {
+            await saveAssignmentToSheet(assignment);
+        }
+        
+        // Reset form
+        document.getElementById('select-vehicle').value = '';
+        document.getElementById('bills-assignment-container').style.display = 'none';
+    }
+
+    // ===== HÀM XỬ LÝ TRẠNG THÁI XE =====
+    async function loadVehicleStatus() {
+        try {
+            const data = await loadDataFromSheets();
+            vehiclesData = data.vehicles;
+            billsData = data.bills;
+            
+            // Cập nhật tổng quan
+            updateStatusSummary();
+            
+            // Load dropdown xe
+            const select = document.getElementById('status-vehicle-select');
+            select.innerHTML = '<option value="">-- Chọn xe để xem chi tiết --</option>';
+            
+            for (let i = 1; i < vehiclesData.length; i++) {
+                const row = vehiclesData[i];
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = `${row[7]} - ${row[5]}`;
+                select.appendChild(option);
+            }
+            
+            // Load bảng trạng thái
+            displayVehicleStatusTable();
+            
+        } catch (error) {
+            console.error('Lỗi khi load trạng thái xe:', error);
+        }
+    }
+
+    function updateStatusSummary() {
+        const totalVehicles = vehiclesData.length - 1; // Bỏ header
+        const activeVehicles = vehiclesData.filter((row, index) => index > 0 && row[2] === 'Đang vận chuyển').length;
+        const completedVehicles = vehiclesData.filter((row, index) => index > 0 && row[2] === 'Hoàn thành').length;
+        const totalBills = billsData.length - 1; // Bỏ header
+        
+        document.getElementById('total-vehicles').textContent = totalVehicles;
+        document.getElementById('active-vehicles').textContent = activeVehicles;
+        document.getElementById('completed-vehicles').textContent = completedVehicles;
+        document.getElementById('total-bills').textContent = totalBills;
+    }
+
+    function displayVehicleStatusTable() {
+        const tbody = document.getElementById('vehicle-status-tbody');
+        tbody.innerHTML = '';
+        
+        for (let i = 1; i < vehiclesData.length; i++) {
+            const row = vehiclesData[i];
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${row[7] || ''}</td>
+                <td>${row[5] || ''}</td>
+                <td>${row[8] || ''}</td>
+                <td><span class="status-badge status-${getStatusClass(row[2])}">${row[2] || 'Chưa xác định'}</span></td>
+                <td>0</td>
+                <td>0 VNĐ</td>
+                <td>${row[1] || ''}</td>
+                <td>${row[4] || ''}</td>
+            `;
+            tbody.appendChild(tr);
+        }
+    }
+
+    // ===== HÀM XỬ LÝ ĐƠN CHƯA XẾP =====
+    async function loadUnassignedBills() {
+        try {
+            const data = await loadDataFromSheets();
+            vehiclesData = data.vehicles;
+            billsData = data.bills;
+            
+            displayUnassignedBills();
+            displayAvailableVehicles();
+            
+        } catch (error) {
+            console.error('Lỗi khi load đơn chưa xếp:', error);
+        }
+    }
+
+    function displayUnassignedBills() {
+        const tbody = document.getElementById('unassigned-bills-tbody');
+        tbody.innerHTML = '';
+        
+        // Bỏ qua header row
+        for (let i = 1; i < billsData.length; i++) {
+            const row = billsData[i];
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${row[0] || ''}</td>
+                <td>${row[3] || ''}</td>
+                <td>${row[8] || ''}</td>
+                <td>${row[9] || ''}</td>
+                <td>${row[16] || ''} kg</td>
+                <td>${row[24] || '0'} VNĐ</td>
+                <td>${row[1] || ''}</td>
+            `;
+            tbody.appendChild(tr);
+        }
+    }
+
+    function displayAvailableVehicles() {
+        const tbody = document.getElementById('available-vehicles-tbody');
+        tbody.innerHTML = '';
+        
+        for (let i = 1; i < vehiclesData.length; i++) {
+            const row = vehiclesData[i];
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${row[7] || ''}</td>
+                <td>${row[5] || ''}</td>
+                <td>${row[8] || ''}</td>
+                <td>0</td>
+                <td>Còn chỗ</td>
+                <td>
+                    <button class="btn btn-success" onclick="assignBillsToVehicle(${i})">📋 Xếp Bill</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        }
+    }
+
+    // ===== HÀM XỬ LÝ QUẢN LÝ BILL TRÊN XE =====
+    async function loadVehiclesForBillManagement() {
+        try {
+            const data = await loadDataFromSheets();
+            vehiclesData = data.vehicles;
+            billsData = data.bills;
+            assignmentsData = data.assignments;
+            
+            const select = document.getElementById('manage-vehicle-select');
+            select.innerHTML = '<option value="">-- Chọn xe để quản lý bill --</option>';
+            
+            // Bỏ qua header row
+            for (let i = 1; i < vehiclesData.length; i++) {
+                const row = vehiclesData[i];
+                const option = document.createElement('option');
+                option.value = row[0]; // Sử dụng ID thay vì index
+                option.textContent = `${row[7]} - ${row[5]} (${row[2]})`;
+                select.appendChild(option);
+            }
+        } catch (error) {
+            console.error('Lỗi khi load xe cho quản lý bill:', error);
+        }
+    }
+
+    async function loadVehicleBills() {
+        const vehicleId = document.getElementById('manage-vehicle-select').value;
+        if (!vehicleId) {
+            alert('Vui lòng chọn xe!');
+            return;
+        }
+        
+        try {
+            const vehicle = vehiclesData.find(v => v[0] === vehicleId);
+            if (!vehicle) {
+                alert('Không tìm thấy thông tin xe!');
+                return;
+            }
+            
+            document.getElementById('selected-vehicle-name').textContent = `${vehicle[7]} - ${vehicle[5]}`;
+            
+            // Hiển thị container quản lý bill
+            document.getElementById('vehicle-bills-management').style.display = 'block';
+            
+            // Load danh sách bill trên xe từ assignments
+            displayVehicleBillsTable(vehicleId);
+            updateVehicleSummary(vehicleId);
+            
+        } catch (error) {
+            console.error('Lỗi khi load bill trên xe:', error);
+        }
+    }
+
+    function displayVehicleBillsTable(vehicleId) {
+        const tbody = document.getElementById('vehicle-bills-tbody');
+        tbody.innerHTML = '';
+        
+        // Lấy danh sách bill đã xếp cho xe này từ assignments
+        const vehicleAssignments = assignmentsData.filter(assignment => 
+            assignment[2] === vehicleId && assignment[7] !== 'Removed'
+        );
+        
+        if (vehicleAssignments.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Chưa có bill nào trên xe này</td></tr>';
+            return;
+        }
+        
+        // Sắp xếp theo thứ tự
+        vehicleAssignments.sort((a, b) => parseInt(a[3]) - parseInt(b[3]));
+        
+        vehicleAssignments.forEach((assignment, index) => {
+            const billId = assignment[1];
+            const billData = billsData.find(b => b[0] === billId);
+            
+            if (billData) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${assignment[3]}</td>
+                    <td>${billData[1]}</td>
+                    <td>${billData[4]}</td>
+                    <td>${billData[9]}</td>
+                    <td>${assignment[5]} kg</td>
+                    <td>${assignment[6]} VNĐ</td>
+                    <td>${assignment[4]}</td>
+                    <td>
+                        <button class="btn btn-warning" onclick="editBillOnVehicle('${assignment[0]}', '${billData[1]}', ${assignment[3]}, ${assignment[4]}, ${assignment[5]}, ${assignment[6]})">✏️ Sửa</button>
+                        <button class="btn btn-danger" onclick="removeBillFromVehicle('${assignment[0]}')">🗑️ Xóa</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            }
+        });
+    }
+
+    function updateVehicleSummary(vehicleId) {
+        // Lấy danh sách bill đã xếp cho xe này
+        const vehicleAssignments = assignmentsData.filter(assignment => 
+            assignment[2] === vehicleId && assignment[7] !== 'Removed'
+        );
+        
+        // Tính tổng kết
+        const totalBills = vehicleAssignments.length;
+        const totalWeight = vehicleAssignments.reduce((sum, assignment) => sum + parseFloat(assignment[5] || 0), 0);
+        const totalCod = vehicleAssignments.reduce((sum, assignment) => sum + parseFloat(assignment[6] || 0), 0);
+        const totalQuantity = vehicleAssignments.reduce((sum, assignment) => sum + parseInt(assignment[4] || 0), 0);
+        
+        // Cập nhật UI
+        document.getElementById('total-bills-on-vehicle').textContent = totalBills;
+        document.getElementById('total-weight-on-vehicle').textContent = totalWeight.toFixed(2);
+        document.getElementById('total-cod-on-vehicle').textContent = totalCod.toLocaleString('vi-VN');
+        document.getElementById('total-quantity-on-vehicle').textContent = totalQuantity;
+    }
+
+    function editBillOnVehicle(assignmentId, billNumber, order, quantity, weight, cod) {
+        // Hiển thị form chỉnh sửa
+        document.getElementById('edit-bill-form').style.display = 'block';
+        document.getElementById('no-bill-selected').style.display = 'none';
+        
+        // Điền dữ liệu vào form
+        document.getElementById('edit-bill-number').value = billNumber;
+        document.getElementById('edit-bill-order').value = order;
+        document.getElementById('edit-bill-quantity').value = quantity;
+        document.getElementById('edit-bill-weight').value = weight;
+        document.getElementById('edit-bill-cod').value = cod;
+        
+        // Lưu assignment ID để cập nhật sau
+        document.getElementById('edit-bill-form').dataset.assignmentId = assignmentId;
+    }
+
+    function cancelEditBill() {
+        document.getElementById('edit-bill-form').style.display = 'none';
+        document.getElementById('no-bill-selected').style.display = 'block';
+    }
+
+    document.getElementById('edit-bill-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const assignmentId = document.getElementById('edit-bill-form').dataset.assignmentId;
+        const newOrder = document.getElementById('edit-bill-order').value;
+        const newQuantity = document.getElementById('edit-bill-quantity').value;
+        const newWeight = document.getElementById('edit-bill-weight').value;
+        const newCod = document.getElementById('edit-bill-cod').value;
+        
+        // Tìm và cập nhật assignment
+        const assignmentIndex = assignmentsData.findIndex(a => a[0] === assignmentId);
+        if (assignmentIndex !== -1) {
+            assignmentsData[assignmentIndex][3] = newOrder; // Order
+            assignmentsData[assignmentIndex][4] = newQuantity; // Quantity
+            assignmentsData[assignmentIndex][5] = newWeight; // Weight
+            assignmentsData[assignmentIndex][6] = newCod; // COD
+            
+            // Lưu vào Google Sheets
+            await updateAssignmentInSheet(assignmentsData[assignmentIndex]);
+        }
+        
+        alert(`✅ Đã cập nhật bill!\nSố thứ tự: ${newOrder}\nSố lượng: ${newQuantity}\nTrọng lượng: ${newWeight} kg\nCOD: ${newCod} VNĐ`);
+        
+        // Ẩn form
+        cancelEditBill();
+        
+        // Reload bảng
+        const vehicleId = document.getElementById('manage-vehicle-select').value;
+        displayVehicleBillsTable(vehicleId);
+        updateVehicleSummary(vehicleId);
+    });
+
+    async function removeBillFromVehicle(assignmentId) {
+        if (confirm('Bạn có chắc muốn xóa bill này khỏi xe?')) {
+            try {
+                // Xóa assignment khỏi Google Sheets
+                await deleteAssignment(assignmentId);
+                
+                // Reload bảng
+                const vehicleId = document.getElementById('manage-vehicle-select').value;
+                displayVehicleBillsTable(vehicleId);
+                updateVehicleSummary(vehicleId);
+                
+                alert('✅ Đã xóa bill khỏi xe thành công!');
+            } catch (error) {
+                console.error('❌ Lỗi khi xóa bill khỏi xe:', error);
+                alert('❌ Lỗi khi xóa bill. Vui lòng thử lại.');
+            }
+        }
+    }
+
+    function reorderBills() {
+        if (confirm('Bạn có chắc muốn sắp xếp lại thứ tự bill theo số thứ tự?')) {
+            const vehicleId = document.getElementById('manage-vehicle-select').value;
+            
+            // Lấy tất cả assignments của xe này và sắp xếp lại
+            const vehicleAssignments = assignmentsData.filter(assignment => 
+                assignment[2] === vehicleId && assignment[7] !== 'Removed'
+            );
+            
+            vehicleAssignments.sort((a, b) => parseInt(a[3]) - parseInt(b[3]));
+            
+            // Cập nhật lại số thứ tự
+            vehicleAssignments.forEach((assignment, index) => {
+                const assignmentIndex = assignmentsData.findIndex(a => a[0] === assignment[0]);
+                if (assignmentIndex !== -1) {
+                    assignmentsData[assignmentIndex][3] = (index + 1).toString();
+                }
+            });
+            
+            alert('✅ Đã sắp xếp lại thứ tự bill!');
+            
+            // Reload bảng
+            displayVehicleBillsTable(vehicleId);
+        }
+    }
+
+    function removeAllBills() {
+        if (confirm('Bạn có chắc muốn xóa TẤT CẢ bill khỏi xe này?')) {
+            const vehicleId = document.getElementById('manage-vehicle-select').value;
+            
+            // Đánh dấu tất cả assignments của xe này là Removed
+            assignmentsData.forEach(assignment => {
+                if (assignment[2] === vehicleId && assignment[7] !== 'Removed') {
+                    assignment[7] = 'Removed';
+                    assignment[9] = `Removed on ${new Date().toISOString().split('T')[0]}`;
+                }
+            });
+            
+            alert('✅ Đã xóa tất cả bill khỏi xe!');
+            
+            // Reload bảng
+            displayVehicleBillsTable(vehicleId);
+            updateVehicleSummary(vehicleId);
+        }
+    }
+
+    // ===== KHỞI TẠO TRANG =====
+    document.addEventListener('DOMContentLoaded', (event) => {
+        // --- Phần lấy dữ liệu và cập nhật giao diện ---
+
+        // Mã đơn hàng: Lấy từ URL hoặc dùng giá trị mặc định nếu không có
+        const orderNumber = getParam("maDonHang") || "ECO105327"; 
+
+        // Tạo mã vạch bằng JsBarcode
+        JsBarcode("#barcode-svg", orderNumber, {
+            format: "CODE128", // Định dạng mã vạch
+            displayValue: true, // Hiển thị giá trị dưới mã vạch
+            fontSize: 18, // Kích thước font chữ
+            width: 2,   // Độ rộng của các vạch
+            height: 50, // Chiều cao của mã vạch
+            textAlign: "center" // Căn giữa mã vạch
+        });
+
+        // Cập nhật thông tin người gửi
+        document.getElementById("tenNguoiGui").textContent = getParam("tenNguoiGui");
+        document.getElementById("diaChiNguoiGui").textContent = getParam("diaChiNguoiGui");
+        document.getElementById("xaPhuongGui").textContent = getParam("xaPhuongGui");
+        document.getElementById("tinhTPGui").textContent = getParam("tinhTPGui");
+        document.getElementById("sdtNguoiGui").textContent = getParam("sdtNguoiGui");
+
+        // Cập nhật thông tin người nhận
+        document.getElementById("tenNguoiNhan").textContent = getParam("tenNguoiNhan");
+        document.getElementById("diaChiNguoiNhan").textContent = getParam("diaChiNguoiNhan");
+        document.getElementById("xaPhuongNhan").textContent = getParam("xaPhuongNhan");
+        document.getElementById("tinhTPNhan").textContent = getParam("tinhTPNhan");
+        document.getElementById("sdtNguoiNhan").textContent = getParam("sdtNguoiNhan");
+        
+        // Cập nhật ngày giờ gửi
+        document.getElementById("ngayGioGui").textContent = getParam("ngayGioGui");
+        
+        // Cập nhật thông tin hàng hóa
+        document.getElementById("soKien").textContent = getParam("soKien");
+        const tlThucValue = getParam("tlThuc"); // Lấy trọng lượng
+        document.getElementById("tlThuc").textContent = tlThucValue ? `${tlThucValue} kg` : ''; // Hiển thị kèm đơn vị kg
+        const thetichValue = getParam("thetich"); // Lấy thể tích
+        document.getElementById("thetich").textContent = thetichValue ? `${thetichValue} m³` : ''; // Hiển thị kèm đơn vị m³
+        document.getElementById("dichVuTrongBang").textContent = getParam("dichVu"); // Dịch vụ trong bảng
+        document.getElementById("ghiChu").textContent = getParam("ghiChu"); // Ghi chú
+        document.getElementById("noiDungHangHoa").textContent = getParam("noiDungHangHoa"); // Nội dung hàng hóa
+
+        // Cập nhật thông tin cước phí và định dạng lại
+        document.getElementById("thanhToan").textContent = getParam("thanhToan"); // Hình thức thanh toán
+        document.getElementById("cuocChinh").textContent = formatCurrency(getParam("cuocChinh")); // Cước chính, định dạng tiền tệ
+        document.getElementById("dichVuThem").textContent = formatCurrency(getParam("dichVuThem")); // Dịch vụ thêm, định dạng tiền tệ
+        document.getElementById("tongCuoc").textContent = formatCurrency(getParam("tongCuoc")); // Tổng cước, định dạng tiền tệ
+        document.getElementById("thuHo").textContent = formatCurrency(getParam("thuHo")); // Tiền thu hộ, định dạng tiền tệ
+        document.getElementById("tongPhaiThu").textContent = formatCurrency(getParam("tongPhaiThu")); // Tổng phải thu, định dạng tiền tệ
+        
+        // 🚀 Tự động gọi lệnh in khi trang đã tải xong và dữ liệu đã được điền
+        // Bỏ comment dòng dưới nếu bạn muốn hóa đơn tự động bật hộp thoại in khi mở.
+        window.print(); 
+    });
+
+    // Hàm định dạng tiền tệ (thêm dấu phẩy ngăn cách hàng nghìn và sử dụng định dạng tiếng Việt)
+    function formatCurrency(amount) {
+        // Loại bỏ tất cả các ký tự không phải số
+        const cleanedAmount = String(amount).replace(/\D/g, '');
+        // Nếu chuỗi sau khi làm sạch rỗng, trả về '0'
+        if (!cleanedAmount) return '0';
+        // Chuyển đổi thành số nguyên và định dạng theo chuẩn VNĐ
+        return parseInt(cleanedAmount, 10).toLocaleString('vi-VN');
+    }
+</script>
+
+<!-- 
+========================================
+GOOGLE APPS SCRIPT CODE
+========================================
+Copy code này vào Google Apps Script (script.google.com):
+
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+    const { action, sheetId, sheetName, data: rowData, rowIndex, serviceAccount } = data;
+    
+    // Xử lý getToken action
+    if (action === 'getToken') {
+      return getServiceAccountToken(serviceAccount);
+    }
+    
+    // Mở spreadsheet
+    const spreadsheet = SpreadsheetApp.openById(sheetId);
+    const sheet = spreadsheet.getSheetByName(sheetName);
+    
+    if (!sheet) {
+      return ContentService.createTextOutput(JSON.stringify({
+        error: `Sheet ${sheetName} not found`
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    switch (action) {
+      case 'append':
+        // Thêm dữ liệu mới
+        sheet.appendRow(rowData);
+        return ContentService.createTextOutput(JSON.stringify({
+          success: true,
+          message: 'Data appended successfully'
+        })).setMimeType(ContentService.MimeType.JSON);
+        
+      case 'read':
+        // Đọc dữ liệu
+        const values = sheet.getDataRange().getValues();
+        return ContentService.createTextOutput(JSON.stringify({
+          success: true,
+          values: values
+        })).setMimeType(ContentService.MimeType.JSON);
+        
+      case 'update':
+        // Cập nhật dữ liệu
+        const rowNum = rowData[0]; // ID là cột đầu tiên
+        sheet.getRange(rowNum, 1, 1, rowData.length).setValues([rowData]);
+        return ContentService.createTextOutput(JSON.stringify({
+          success: true,
+          message: 'Data updated successfully'
+        })).setMimeType(ContentService.MimeType.JSON);
+        
+      case 'delete':
+        // Xóa dòng
+        sheet.deleteRow(rowIndex);
+        return ContentService.createTextOutput(JSON.stringify({
+          success: true,
+          message: 'Row deleted successfully'
+        })).setMimeType(ContentService.MimeType.JSON);
+        
+      default:
+        return ContentService.createTextOutput(JSON.stringify({
+          error: 'Invalid action'
+        })).setMimeType(ContentService.MimeType.JSON);
+    }
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({
+      error: error.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function getServiceAccountToken(serviceAccount) {
+  try {
+    // Tạo JWT token cho service account
+    const now = Math.floor(Date.now() / 1000);
+    
+    const header = {
+      "alg": "RS256",
+      "typ": "JWT"
+    };
+    
+    const payload = {
+      "iss": serviceAccount.client_email,
+      "scope": "https://www.googleapis.com/auth/spreadsheets",
+      "aud": serviceAccount.token_uri,
+      "exp": now + 3600,
+      "iat": now
+    };
+    
+    // Tạo JWT token
+    const jwt = createJWT(header, payload, serviceAccount.private_key);
+    
+    // Lấy access token từ Google
+    const response = UrlFetchApp.fetch(serviceAccount.token_uri, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      payload: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
+    });
+    
+    const tokenData = JSON.parse(response.getContentText());
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      access_token: tokenData.access_token
+    })).setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({
+      error: error.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function createJWT(header, payload, privateKey) {
+  // Encode header và payload
+  const encodedHeader = Utilities.base64EncodeWebSafe(JSON.stringify(header)).replace(/=/g, '');
+  const encodedPayload = Utilities.base64EncodeWebSafe(JSON.stringify(payload)).replace(/=/g, '');
+  
+  // Tạo signature (simplified)
+  const signature = Utilities.base64EncodeWebSafe(encodedHeader + '.' + encodedPayload).replace(/=/g, '');
+  
+  return `${encodedHeader}.${encodedPayload}.${signature}`;
+}
+
+function doGet(e) {
+  return ContentService.createTextOutput(JSON.stringify({
+    message: 'Google Sheets API Proxy is running'
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+========================================
+HƯỚNG DẪN SỬ DỤNG:
+========================================
+1. Truy cập https://script.google.com
+2. Tạo project mới
+3. Copy code trên vào editor
+4. Save project
+5. Deploy → New Deployment → Web App
+6. Execute as: Me
+7. Who has access: Anyone
+8. Deploy
+9. Copy URL và thay YOUR_SCRIPT_ID trong code HTML
+10. Chia sẻ Google Sheets với sgiholding@ansha-462603.iam.gserviceaccount.com
+-->
+
+</body>
+</html>

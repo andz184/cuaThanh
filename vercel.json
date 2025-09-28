@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "api/**/*.js": {
+      "runtime": "nodejs18.x"
+    }
+  },
+  "env": {
+    "GOOGLE_API_SERVICES": "@google_api_services"
+  }
+}

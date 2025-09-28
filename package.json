@@ -1,0 +1,17 @@
+{
+  "name": "eco-transport-management",
+  "version": "1.0.0",
+  "description": "Hệ thống quản lý vận tải ECO",
+  "main": "index.html",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'No build step required'",
+    "start": "echo 'Static site'"
+  },
+  "dependencies": {
+    "googleapis": "^128.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
