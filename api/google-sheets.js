@@ -31,6 +31,26 @@ export default async function handler(req, res) {
 
     const { action, sheetId, sheetName, data, rowIndex } = req.body;
 
+    // Debug logging
+    console.log('API Request:', { action, sheetId, sheetName, dataLength: data?.length });
+
+    // Validate required parameters
+    if (!sheetId) {
+      console.error('Missing sheetId:', req.body);
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required parameters: spreadsheetId'
+      });
+    }
+
+    if (!sheetName) {
+      console.error('Missing sheetName:', req.body);
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required parameters: sheetName'
+      });
+    }
+
     switch (action) {
       case 'read':
         const readResult = await sheets.spreadsheets.values.get({

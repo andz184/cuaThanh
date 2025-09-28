@@ -1087,8 +1087,9 @@
             
             <div style="background: #e7f3ff; padding: 15px; border-radius: 5px; margin-top: 15px;">
                 <strong>✅ Đã cấu hình cho Vercel Deployment!</strong><br>
-                Sheet: <a href="https://docs.google.com/spreadsheets/d/1SbK_vKUJV7dTzDPmxmlEM-7MXBoh6guGRKU4dWvAiw4/edit?gid=979999719#gid=979999719" target="_blank">data vận tải</a><br>
-                Sheet ID: 1SbK_vKUJV7dTzDPmxmlEM-7MXBoh6guGRKU4dWvAiw4<br><br>
+                Sheet: <a href="https://docs.google.com/spreadsheets/d/1SbK_vKUJV7dTzDPmxmlEM-7MXBoh6guGRKU4dWvAiw4" target="_blank">Google Sheets</a><br>
+                Sheet ID: 1SbK_vKUJV7dTzDPmxmlEM-7MXBoh6guGRKU4dWvAiw4<br>
+                Sheet Name: "Xe" (cho dữ liệu xe)<br><br>
                 <strong>📝 Bước tiếp theo cho Vercel:</strong><br>
                 1. Copy toàn bộ nội dung file JSON service account<br>
                 2. Vào Vercel Dashboard → Environment Variables<br>
@@ -1101,7 +1102,7 @@
             
             <div style="background: #d4edda; padding: 15px; border-radius: 5px; margin-top: 15px;">
                 <strong>🎉 Sau khi chia sẻ Google Sheets:</strong><br>
-                - ✅ Thêm xe mới → Lưu vào Google Sheets "data vận tải"<br>
+                - ✅ Thêm xe mới → Lưu vào Google Sheets sheet "Xe"<br>
                 - ✅ Xếp bill cho xe → Tạo assignment records<br>
                 - ✅ Sửa thông tin → Cập nhật real-time<br>
                 - ✅ Xóa dữ liệu → Xóa khỏi Google Sheets<br>
@@ -1117,7 +1118,7 @@
         BILL_SHEET_ID: '1SbK_vKUJV7dTzDPmxmlEM-7MXBoh6guGRKU4dWvAiw4',
         BILL_SHEET_RANGE: 'Sheet1!A:AH',
         VEHICLE_SHEET_ID: '1SbK_vKUJV7dTzDPmxmlEM-7MXBoh6guGRKU4dWvAiw4',
-        VEHICLE_SHEET_RANGE: 'data vận tải!A:K', // Sử dụng tên sheet thực tế
+        VEHICLE_SHEET_RANGE: 'Xe!A:K', // Sử dụng sheet "Xe"
         ASSIGNMENT_SHEET_ID: '1SbK_vKUJV7dTzDPmxmlEM-7MXBoh6guGRKU4dWvAiw4',
         ASSIGNMENT_SHEET_RANGE: 'Sheet3!A:J' // ID, Bill_ID, Vehicle_ID, Order, Quantity, Weight, COD, Status, Created_Date, Notes
     };
@@ -1168,7 +1169,7 @@
         try {
             // Load dữ liệu từ Google Sheets sử dụng API key
             const [vehicles, bills, assignments] = await Promise.all([
-                readFromGoogleSheets('vehicles', 'data vận tải'),
+                readFromGoogleSheets('vehicles', 'Xe'),
                 readFromGoogleSheets('bills', 'Sheet1'),
                 readFromGoogleSheets('assignments', 'Sheet3')
             ]);
@@ -1326,7 +1327,7 @@
     async function saveVehicleToSheet(vehicleData) {
         try {
             // Sử dụng Google Sheets API trực tiếp để lưu dữ liệu
-            await saveToGoogleSheets('vehicles', vehicleData, 'data vận tải');
+            await saveToGoogleSheets('vehicles', vehicleData, 'Xe');
             console.log('✅ Đã lưu xe vào Google Sheets');
             return true;
         } catch (error) {
