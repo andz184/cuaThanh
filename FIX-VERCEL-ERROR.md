@@ -31,18 +31,11 @@ Warning: Detected "engines": { "node": ">=18.0.0" } in your `package.json`
 }
 ```
 
-### Bước 2: Tạo file vercel.json
-```json
-{
-  "buildCommand": "echo 'No build step required'",
-  "outputDirectory": ".",
-  "functions": {
-    "api/**/*.js": {
-      "runtime": "nodejs18.x"
-    }
-  }
-}
+### Bước 2: Xóa file vercel.json (nếu có)
+```bash
+rm vercel.json
 ```
+**Lý do**: Vercel sẽ tự động detect Node.js runtime và output directory
 
 ### Bước 3: Deploy lại
 ```bash
